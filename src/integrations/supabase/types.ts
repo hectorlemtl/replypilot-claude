@@ -16,78 +16,63 @@ export type Database = {
     Tables: {
       app_settings: {
         Row: {
-          always_send_digest: boolean | null
-          auto_send_simple_affirmative: boolean | null
-          created_at: string | null
+          auto_send_simple_affirmative: boolean
+          created_at: string
           default_calendar_link: string | null
           default_deck_link: string | null
-          digest_times: Json | null
-          digest_timezone: string | null
           id: string
-          instantly_api_base_url: string | null
-          slack_bot_token: string | null
+          instantly_api_base_url: string
           slack_channel_id: string | null
-          slack_enabled: boolean | null
-          updated_at: string | null
-          workspace_name: string | null
+          updated_at: string
+          workspace_name: string
         }
         Insert: {
-          always_send_digest?: boolean | null
-          auto_send_simple_affirmative?: boolean | null
-          created_at?: string | null
+          auto_send_simple_affirmative?: boolean
+          created_at?: string
           default_calendar_link?: string | null
           default_deck_link?: string | null
-          digest_times?: Json | null
-          digest_timezone?: string | null
           id?: string
-          instantly_api_base_url?: string | null
-          slack_bot_token?: string | null
+          instantly_api_base_url?: string
           slack_channel_id?: string | null
-          slack_enabled?: boolean | null
-          updated_at?: string | null
-          workspace_name?: string | null
+          updated_at?: string
+          workspace_name?: string
         }
         Update: {
-          always_send_digest?: boolean | null
-          auto_send_simple_affirmative?: boolean | null
-          created_at?: string | null
+          auto_send_simple_affirmative?: boolean
+          created_at?: string
           default_calendar_link?: string | null
           default_deck_link?: string | null
-          digest_times?: Json | null
-          digest_timezone?: string | null
           id?: string
-          instantly_api_base_url?: string | null
-          slack_bot_token?: string | null
+          instantly_api_base_url?: string
           slack_channel_id?: string | null
-          slack_enabled?: boolean | null
-          updated_at?: string | null
-          workspace_name?: string | null
+          updated_at?: string
+          workspace_name?: string
         }
         Relationships: []
       }
       approval_actions: {
         Row: {
-          acted_at: string | null
+          acted_at: string
           acted_by: string | null
-          action: string
+          action: Database["public"]["Enums"]["approval_action_type"]
           draft_version_id: string | null
           feedback: string | null
           id: string
           reply_id: string
         }
         Insert: {
-          acted_at?: string | null
+          acted_at?: string
           acted_by?: string | null
-          action: string
+          action: Database["public"]["Enums"]["approval_action_type"]
           draft_version_id?: string | null
           feedback?: string | null
           id?: string
           reply_id: string
         }
         Update: {
-          acted_at?: string | null
+          acted_at?: string
           acted_by?: string | null
-          action?: string
+          action?: Database["public"]["Enums"]["approval_action_type"]
           draft_version_id?: string | null
           feedback?: string | null
           id?: string
@@ -112,22 +97,22 @@ export type Database = {
       }
       audit_logs: {
         Row: {
-          created_at: string | null
-          event_payload: Json | null
+          created_at: string
+          event_payload: Json
           event_type: string
           id: string
           reply_id: string | null
         }
         Insert: {
-          created_at?: string | null
-          event_payload?: Json | null
+          created_at?: string
+          event_payload?: Json
           event_type: string
           id?: string
           reply_id?: string | null
         }
         Update: {
-          created_at?: string | null
-          event_payload?: Json | null
+          created_at?: string
+          event_payload?: Json
           event_type?: string
           id?: string
           reply_id?: string | null
@@ -144,40 +129,40 @@ export type Database = {
       }
       campaigns: {
         Row: {
-          active: boolean | null
+          active: boolean
           calendar_link: string | null
-          created_at: string | null
+          created_at: string
           deck_link: string | null
           description: string | null
           id: string
           name: string
-          updated_at: string | null
+          updated_at: string
         }
         Insert: {
-          active?: boolean | null
+          active?: boolean
           calendar_link?: string | null
-          created_at?: string | null
+          created_at?: string
           deck_link?: string | null
           description?: string | null
           id?: string
           name: string
-          updated_at?: string | null
+          updated_at?: string
         }
         Update: {
-          active?: boolean | null
+          active?: boolean
           calendar_link?: string | null
-          created_at?: string | null
+          created_at?: string
           deck_link?: string | null
           description?: string | null
           id?: string
           name?: string
-          updated_at?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
       draft_versions: {
         Row: {
-          created_at: string | null
+          created_at: string
           created_by: string
           draft_html: string | null
           draft_text: string
@@ -187,7 +172,7 @@ export type Database = {
           version_number: number
         }
         Insert: {
-          created_at?: string | null
+          created_at?: string
           created_by?: string
           draft_html?: string | null
           draft_text: string
@@ -197,7 +182,7 @@ export type Database = {
           version_number: number
         }
         Update: {
-          created_at?: string | null
+          created_at?: string
           created_by?: string
           draft_html?: string | null
           draft_text?: string
@@ -219,74 +204,74 @@ export type Database = {
       inbound_replies: {
         Row: {
           campaign_id: string | null
-          created_at: string | null
+          created_at: string
           email_account: string | null
           id: string
           instantly_email_id: string
           instantly_unibox_url: string | null
-          is_first_reply: boolean | null
+          is_first_reply: boolean
           lead_email: string
           lead_name: string | null
           processing_error: string | null
-          raw_payload: Json | null
+          raw_payload: Json
           reasoning: string | null
-          received_at: string | null
+          received_at: string
           reply_html: string | null
           reply_subject: string | null
           reply_text: string | null
           sentiment: string | null
           simple_affirmative: boolean | null
-          status: string
-          temperature: string | null
-          updated_at: string | null
+          status: Database["public"]["Enums"]["reply_status"]
+          temperature: Database["public"]["Enums"]["reply_temperature"] | null
+          updated_at: string
           wants_pdf: boolean | null
         }
         Insert: {
           campaign_id?: string | null
-          created_at?: string | null
+          created_at?: string
           email_account?: string | null
           id?: string
           instantly_email_id: string
           instantly_unibox_url?: string | null
-          is_first_reply?: boolean | null
+          is_first_reply?: boolean
           lead_email: string
           lead_name?: string | null
           processing_error?: string | null
-          raw_payload?: Json | null
+          raw_payload?: Json
           reasoning?: string | null
-          received_at?: string | null
+          received_at?: string
           reply_html?: string | null
           reply_subject?: string | null
           reply_text?: string | null
           sentiment?: string | null
           simple_affirmative?: boolean | null
-          status?: string
-          temperature?: string | null
-          updated_at?: string | null
+          status?: Database["public"]["Enums"]["reply_status"]
+          temperature?: Database["public"]["Enums"]["reply_temperature"] | null
+          updated_at?: string
           wants_pdf?: boolean | null
         }
         Update: {
           campaign_id?: string | null
-          created_at?: string | null
+          created_at?: string
           email_account?: string | null
           id?: string
           instantly_email_id?: string
           instantly_unibox_url?: string | null
-          is_first_reply?: boolean | null
+          is_first_reply?: boolean
           lead_email?: string
           lead_name?: string | null
           processing_error?: string | null
-          raw_payload?: Json | null
+          raw_payload?: Json
           reasoning?: string | null
-          received_at?: string | null
+          received_at?: string
           reply_html?: string | null
           reply_subject?: string | null
           reply_text?: string | null
           sentiment?: string | null
           simple_affirmative?: boolean | null
-          status?: string
-          temperature?: string | null
-          updated_at?: string | null
+          status?: Database["public"]["Enums"]["reply_status"]
+          temperature?: Database["public"]["Enums"]["reply_temperature"] | null
+          updated_at?: string
           wants_pdf?: boolean | null
         }
         Relationships: [
@@ -301,36 +286,36 @@ export type Database = {
       }
       prompt_templates: {
         Row: {
-          active: boolean | null
-          created_at: string | null
+          active: boolean
+          created_at: string
           id: string
           model_name: string | null
           name: string
           system_prompt: string | null
           template_type: string
-          updated_at: string | null
+          updated_at: string
           user_prompt: string | null
         }
         Insert: {
-          active?: boolean | null
-          created_at?: string | null
+          active?: boolean
+          created_at?: string
           id?: string
           model_name?: string | null
           name: string
           system_prompt?: string | null
           template_type: string
-          updated_at?: string | null
+          updated_at?: string
           user_prompt?: string | null
         }
         Update: {
-          active?: boolean | null
-          created_at?: string | null
+          active?: boolean
+          created_at?: string
           id?: string
           model_name?: string | null
           name?: string
           system_prompt?: string | null
           template_type?: string
-          updated_at?: string | null
+          updated_at?: string
           user_prompt?: string | null
         }
         Relationships: []
@@ -344,9 +329,9 @@ export type Database = {
           reply_id: string
           request_payload: Json | null
           response_payload: Json | null
-          sent_at: string | null
+          sent_at: string
           status_code: number | null
-          success: boolean | null
+          success: boolean
         }
         Insert: {
           draft_version_id?: string | null
@@ -356,9 +341,9 @@ export type Database = {
           reply_id: string
           request_payload?: Json | null
           response_payload?: Json | null
-          sent_at?: string | null
+          sent_at?: string
           status_code?: number | null
-          success?: boolean | null
+          success?: boolean
         }
         Update: {
           draft_version_id?: string | null
@@ -368,9 +353,9 @@ export type Database = {
           reply_id?: string
           request_payload?: Json | null
           response_payload?: Json | null
-          sent_at?: string | null
+          sent_at?: string
           status_code?: number | null
-          success?: boolean | null
+          success?: boolean
         }
         Relationships: [
           {
@@ -397,7 +382,20 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      approval_action_type: "approved" | "rejected"
+      reply_status:
+        | "received"
+        | "classified"
+        | "skipped"
+        | "drafted"
+        | "awaiting_review"
+        | "approved"
+        | "rejected"
+        | "regenerated"
+        | "sent"
+        | "manual_review"
+        | "failed"
+      reply_temperature: "hot" | "warm" | "for_later" | "cold" | "out_of_office"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -524,6 +522,22 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      approval_action_type: ["approved", "rejected"],
+      reply_status: [
+        "received",
+        "classified",
+        "skipped",
+        "drafted",
+        "awaiting_review",
+        "approved",
+        "rejected",
+        "regenerated",
+        "sent",
+        "manual_review",
+        "failed",
+      ],
+      reply_temperature: ["hot", "warm", "for_later", "cold", "out_of_office"],
+    },
   },
 } as const
