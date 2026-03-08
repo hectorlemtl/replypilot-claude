@@ -8,9 +8,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { Save, Plus, Pencil } from "lucide-react";
+import { Save, Pencil, CheckCircle, XCircle } from "lucide-react";
+import { PromptTester } from "@/components/cockpit/PromptTester";
+import { format } from "date-fns";
 
 export default function SettingsPage() {
   const { toast } = useToast();
@@ -43,7 +46,6 @@ export default function SettingsPage() {
     },
   });
 
-  // Settings form state
   const [form, setForm] = useState<any>(null);
   useEffect(() => {
     if (settings) setForm({ ...settings });
@@ -99,14 +101,36 @@ export default function SettingsPage() {
         <p className="text-sm text-muted-foreground mt-1">Configure ReplyPilot</p>
       </div>
 
-      <Tabs defaultValue="workspace">
+      <Tabs defaultValue="prompts">
         <TabsList className="mb-6">
+          <TabsTrigger value="prompts">Prompts</TabsTrigger>
+          <TabsTrigger value="test">Test prompts</TabsTrigger>
           <TabsTrigger value="workspace">Workspace</TabsTrigger>
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
-          <TabsTrigger value="slack">Slack digests</TabsTrigger>
-          <TabsTrigger value="prompts">Prompts</TabsTrigger>
+          <TabsTrigger value="slack">Slack</TabsTrigger>
           <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="prompts">
+          <div className="space-y-4">
+            <div className="bg-primary/5 border border-primary/10 rounded-lg p-3 mb-4">
+              <p className="text-xs text-primary font-medium">
+                These prompts are used by the edge functions in real-time. Changes take effect immediately on new classifications and drafts.
+              </p>
+            </div>
+            {templatesLoading ? (
+              Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-40" />)
+            ) : (
+              templates?.map((t: any) => (
+                <PromptTemplateCard key={t.id} template={t} onSave={(updated) => saveTemplateMutation.mutate(updated)} />
+              ))
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="test">
+          <PromptTester />
+        </TabsContent>
 
         <TabsContent value="workspace">
           {form && (
@@ -176,38 +200,9 @@ export default function SettingsPage() {
                 <CardDescription>Scheduled summary notifications</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <Switch
-                    checked={form.slack_enabled}
-                    onCheckedChange={(v) => setForm({ ...form, slack_enabled: v })}
-                  />
-                  <Label>Enable Slack digests</Label>
-                </div>
                 <div className="space-y-2">
                   <Label>Slack channel ID</Label>
                   <Input value={form.slack_channel_id || ""} onChange={(e) => setForm({ ...form, slack_channel_id: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Timezone</Label>
-                  <Input value={form.digest_timezone || ""} onChange={(e) => setForm({ ...form, digest_timezone: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Digest times (JSON array)</Label>
-                  <Input
-                    value={JSON.stringify(form.digest_times)}
-                    onChange={(e) => {
-                      try {
-                        setForm({ ...form, digest_times: JSON.parse(e.target.value) });
-                      } catch {}
-                    }}
-                  />
-                </div>
-                <div className="flex items-center gap-3">
-                  <Switch
-                    checked={form.always_send_digest}
-                    onCheckedChange={(v) => setForm({ ...form, always_send_digest: v })}
-                  />
-                  <Label>Send digest even with zero activity</Label>
                 </div>
                 <div className="flex gap-2">
                   <Button onClick={() => saveSettingsMutation.mutate()} disabled={saveSettingsMutation.isPending}>
@@ -230,18 +225,6 @@ export default function SettingsPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="prompts">
-          <div className="space-y-4">
-            {templatesLoading ? (
-              Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-40" />)
-            ) : (
-              templates?.map((t: any) => (
-                <PromptTemplateCard key={t.id} template={t} onSave={(updated) => saveTemplateMutation.mutate(updated)} />
-              ))
-            )}
-          </div>
-        </TabsContent>
-
         <TabsContent value="campaigns">
           <div className="space-y-4">
             {campaignsLoading ? (
@@ -255,11 +238,9 @@ export default function SettingsPage() {
                         <p className="font-medium">{c.name}</p>
                         <p className="text-xs text-muted-foreground">{c.description}</p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${c.active ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"}`}>
-                          {c.active ? "Active" : "Inactive"}
-                        </span>
-                      </div>
+                      <Badge variant={c.active ? "default" : "secondary"} className={c.active ? "bg-success/15 text-success border-success/30" : ""}>
+                        {c.active ? "Active" : "Inactive"}
+                      </Badge>
                     </div>
                   </CardContent>
                 </Card>
@@ -278,55 +259,71 @@ function PromptTemplateCard({ template, onSave }: { template: any; onSave: (t: a
 
   useEffect(() => setLocal(template), [template]);
 
-  if (!editing) {
-    return (
-      <Card>
-        <CardContent className="py-4">
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <p className="font-medium">{local.name}</p>
-              <p className="text-xs text-muted-foreground">Type: {local.template_type} · Model: {local.model_name}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className={`text-xs px-2 py-0.5 rounded-full ${local.active ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"}`}>
-                {local.active ? "Active" : "Inactive"}
-              </span>
-              <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
-                <Pencil className="w-3.5 h-3.5" />
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <Card>
-      <CardContent className="py-4 space-y-4">
-        <div className="flex items-center justify-between">
-          <p className="font-medium">{local.name}</p>
-          <div className="flex items-center gap-2">
-            <Switch checked={local.active} onCheckedChange={(v) => setLocal({ ...local, active: v })} />
-            <Label className="text-xs">Active</Label>
+      <CardContent className="py-4">
+        {!editing ? (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <p className="font-medium text-sm">{local.name}</p>
+                {local.active ? (
+                  <Badge variant="outline" className="bg-success/10 text-success border-success/20 text-[10px]">
+                    <CheckCircle className="w-3 h-3 mr-0.5" /> Active
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-[10px]">
+                    <XCircle className="w-3 h-3 mr-0.5" /> Inactive
+                  </Badge>
+                )}
+              </div>
+              <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
+                <Pencil className="w-3.5 h-3.5 mr-1" /> Edit
+              </Button>
+            </div>
+            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+              <span>Type: <strong>{local.template_type}</strong></span>
+              <span>Model: <strong>{local.model_name || "default"}</strong></span>
+              {local.updated_at && (
+                <span>Updated: {format(new Date(local.updated_at), "MMM d, h:mm a")}</span>
+              )}
+            </div>
+            {local.system_prompt && (
+              <p className="text-xs text-muted-foreground mt-2 truncate max-w-full">
+                System: {local.system_prompt.slice(0, 100)}...
+              </p>
+            )}
           </div>
-        </div>
-        <div className="space-y-2">
-          <Label>Model</Label>
-          <Input value={local.model_name || ""} onChange={(e) => setLocal({ ...local, model_name: e.target.value })} />
-        </div>
-        <div className="space-y-2">
-          <Label>System prompt</Label>
-          <Textarea value={local.system_prompt || ""} onChange={(e) => setLocal({ ...local, system_prompt: e.target.value })} className="min-h-[100px] text-xs font-mono" />
-        </div>
-        <div className="space-y-2">
-          <Label>User prompt</Label>
-          <Textarea value={local.user_prompt || ""} onChange={(e) => setLocal({ ...local, user_prompt: e.target.value })} className="min-h-[120px] text-xs font-mono" />
-        </div>
-        <div className="flex gap-2">
-          <Button size="sm" onClick={() => { onSave(local); setEditing(false); }}>Save</Button>
-          <Button size="sm" variant="ghost" onClick={() => { setLocal(template); setEditing(false); }}>Cancel</Button>
-        </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="font-medium">{local.name}</p>
+              <div className="flex items-center gap-2">
+                <Switch checked={local.active} onCheckedChange={(v) => setLocal({ ...local, active: v })} />
+                <Label className="text-xs">Active</Label>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Model</Label>
+              <Input value={local.model_name || ""} onChange={(e) => setLocal({ ...local, model_name: e.target.value })} className="h-8 text-xs" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">System prompt</Label>
+              <Textarea value={local.system_prompt || ""} onChange={(e) => setLocal({ ...local, system_prompt: e.target.value })} className="min-h-[100px] text-xs font-mono" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">User prompt</Label>
+              <Textarea value={local.user_prompt || ""} onChange={(e) => setLocal({ ...local, user_prompt: e.target.value })} className="min-h-[120px] text-xs font-mono" />
+              <p className="text-[10px] text-muted-foreground">
+                Available variables: {"{{reply_text}}"}, {"{{lead_email}}"}, {"{{temperature}}"}, {"{{wants_pdf}}"}, {"{{calendar_link}}"}, {"{{deck_link}}"}, {"{{previous_draft}}"}, {"{{feedback}}"}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={() => { onSave(local); setEditing(false); }}>Save</Button>
+              <Button size="sm" variant="ghost" onClick={() => { setLocal(template); setEditing(false); }}>Cancel</Button>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
