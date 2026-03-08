@@ -150,15 +150,15 @@ export function DraftPanel({
             No draft generated yet
           </div>
         ) : isEditing ? (
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2 h-full">
             <Textarea
               ref={editorRef}
               value={editedDraft}
               onChange={(e) => setEditedDraft(e.target.value)}
-              className="min-h-[180px] text-sm"
+              className="flex-1 min-h-[250px] text-sm resize-none"
               autoFocus
             />
-            <div className="flex gap-2">
+            <div className="flex gap-2 shrink-0">
               <Button size="sm" onClick={handleSaveEdit} disabled={isSaving} className="text-xs h-7">
                 {isSaving ? "Saving..." : "Save draft"}
               </Button>
