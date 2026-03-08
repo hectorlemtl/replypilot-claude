@@ -1,1 +1,19 @@
 project_id = "vvbckbhfrlbvadkwaleh"
+
+[functions.webhook-instantly-reply]
+verify_jwt = false
+
+[functions.classify-reply]
+verify_jwt = false
+
+[functions.generate-draft]
+verify_jwt = false
+
+[functions.regenerate-draft]
+verify_jwt = false
+
+[functions.send-reply]
+verify_jwt = false
+
+[functions.send-slack-digest]
+verify_jwt = false
