@@ -1,0 +1,270 @@
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Send, RefreshCw, AlertTriangle, Pencil, RotateCcw } from "lucide-react";
+import { FeedbackChips } from "./FeedbackChips";
+import { DiffView } from "./DiffView";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+
+interface DraftPanelProps {
+  reply: any;
+  latestDraft: any;
+  previousDraft: any;
+  onApprove: () => void;
+  onRegenerate: (feedback: string) => void;
+  onMarkManual: () => void;
+  onSaveDraft: (text: string) => void;
+  onRetrySend: () => void;
+  isApproving: boolean;
+  isRegenerating: boolean;
+  isMarkingManual: boolean;
+  isSaving: boolean;
+  isRetrying: boolean;
+  feedbackRef?: React.RefObject<HTMLTextAreaElement>;
+  editorRef?: React.RefObject<HTMLTextAreaElement>;
+}
+
+export function DraftPanel({
+  reply,
+  latestDraft,
+  previousDraft,
+  onApprove,
+  onRegenerate,
+  onMarkManual,
+  onSaveDraft,
+  onRetrySend,
+  isApproving,
+  isRegenerating,
+  isMarkingManual,
+  isSaving,
+  isRetrying,
+  feedbackRef,
+  editorRef,
+}: DraftPanelProps) {
+  const [feedback, setFeedback] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedDraft, setEditedDraft] = useState("");
+  const [showDiff, setShowDiff] = useState(false);
+
+  // Reset state when reply changes
+  useEffect(() => {
+    setFeedback("");
+    setIsEditing(false);
+    setEditedDraft("");
+    setShowDiff(false);
+  }, [reply?.id]);
+
+  // Auto-show diff when there's a previous version
+  useEffect(() => {
+    if (previousDraft && latestDraft && previousDraft.id !== latestDraft.id) {
+      setShowDiff(true);
+    }
+  }, [latestDraft?.id, previousDraft?.id]);
+
+  const handleChipClick = useCallback((chip: string) => {
+    setFeedback((prev) => (prev ? `${prev}, ${chip.toLowerCase()}` : chip));
+  }, []);
+
+  const handleRegenerate = useCallback(() => {
+    if (feedback.trim()) {
+      onRegenerate(feedback);
+      setFeedback("");
+    }
+  }, [feedback, onRegenerate]);
+
+  const handleStartEdit = useCallback(() => {
+    setEditedDraft(latestDraft?.draft_text || "");
+    setIsEditing(true);
+  }, [latestDraft]);
+
+  const handleSaveEdit = useCallback(() => {
+    if (editedDraft.trim()) {
+      onSaveDraft(editedDraft);
+      setIsEditing(false);
+    }
+  }, [editedDraft, onSaveDraft]);
+
+  if (!reply) {
+    return (
+      <div className="flex flex-col h-full items-center justify-center text-muted-foreground">
+        <p className="text-sm">No reply selected</p>
+      </div>
+    );
+  }
+
+  const canApprove = ["awaiting_review", "regenerated"].includes(reply.status);
+  const isFailed = reply.status === "failed";
+
+  return (
+    <div className="flex flex-col h-full overflow-y-auto">
+      {/* Draft header */}
+      <div className="p-3 border-b border-border shrink-0">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-foreground">Draft</span>
+            {latestDraft && (
+              <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                v{latestDraft.version_number} · {latestDraft.created_by}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-1">
+            {previousDraft && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => setShowDiff(!showDiff)}
+                    className={cn(
+                      "p-1 rounded text-[10px] transition-colors",
+                      showDiff ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    Diff
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Toggle version diff</TooltipContent>
+              </Tooltip>
+            )}
+            {latestDraft && !isEditing && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={handleStartEdit}
+                    className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <Pencil className="w-3 h-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Edit draft (E)</TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Draft content */}
+      <div className="flex-1 p-3 space-y-3 overflow-y-auto">
+        {!latestDraft ? (
+          <div className="flex items-center justify-center h-32 text-muted-foreground text-xs">
+            No draft generated yet
+          </div>
+        ) : isEditing ? (
+          <div className="space-y-2">
+            <Textarea
+              ref={editorRef}
+              value={editedDraft}
+              onChange={(e) => setEditedDraft(e.target.value)}
+              className="min-h-[180px] text-sm"
+              autoFocus
+            />
+            <div className="flex gap-2">
+              <Button size="sm" onClick={handleSaveEdit} disabled={isSaving} className="text-xs h-7">
+                {isSaving ? "Saving..." : "Save draft"}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setIsEditing(false)} className="text-xs h-7">
+                Cancel
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="bg-muted/30 rounded-lg p-3 text-sm whitespace-pre-wrap leading-relaxed">
+              {latestDraft.draft_text}
+            </div>
+
+            {/* Diff view */}
+            {showDiff && previousDraft && (
+              <DiffView
+                oldText={previousDraft.draft_text}
+                newText={latestDraft.draft_text}
+              />
+            )}
+          </>
+        )}
+
+        {/* Feedback + Regenerate section */}
+        {canApprove && !isEditing && (
+          <div className="space-y-2 pt-1">
+            <FeedbackChips onChipClick={handleChipClick} />
+            <div className="flex gap-2">
+              <Textarea
+                ref={feedbackRef}
+                placeholder="Quick instruction to regenerate..."
+                value={feedback}
+                onChange={(e) => setFeedback(e.target.value)}
+                className="min-h-[44px] max-h-[100px] text-xs resize-none"
+                onKeyDown={(e) => {
+                  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                    e.preventDefault();
+                    handleRegenerate();
+                  }
+                }}
+              />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={handleRegenerate}
+                    disabled={isRegenerating || !feedback.trim()}
+                    className="shrink-0 h-[44px] w-[44px]"
+                  >
+                    <RefreshCw className={cn("w-4 h-4", isRegenerating && "animate-spin")} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Regenerate (R then ⌘↵)</TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Action bar - fixed at bottom */}
+      <div className="p-3 border-t border-border shrink-0 space-y-2">
+        {canApprove && (
+          <div className="flex gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  className="flex-1 bg-success hover:bg-success/90 text-success-foreground h-9"
+                  onClick={onApprove}
+                  disabled={isApproving || !latestDraft}
+                >
+                  <Send className="w-3.5 h-3.5 mr-1.5" />
+                  {isApproving ? "Sending..." : "Approve & send"}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Approve & send (A)</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={onMarkManual}
+                  disabled={isMarkingManual}
+                  className="h-9 w-9 shrink-0"
+                >
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Mark manual review (M)</TooltipContent>
+            </Tooltip>
+          </div>
+        )}
+
+        {isFailed && (
+          <Button
+            className="w-full h-9"
+            onClick={onRetrySend}
+            disabled={isRetrying}
+          >
+            <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+            {isRetrying ? "Retrying..." : "Retry send"}
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
