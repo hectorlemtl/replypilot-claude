@@ -41,8 +41,8 @@ export default function InboxPage() {
       if (activeFilter !== "all") {
         const filter = FILTERS.find((f) => f.key === activeFilter);
         if (filter && "type" in filter) {
-          if (filter.type === "temperature") query = query.eq("temperature", activeFilter);
-          else query = query.eq("status", activeFilter);
+          if (filter.type === "temperature") query = query.eq("temperature", activeFilter as any);
+          else query = query.eq("status", activeFilter as any);
         }
       }
 
