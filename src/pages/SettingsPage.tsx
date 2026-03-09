@@ -110,6 +110,7 @@ export default function SettingsPage() {
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
           <TabsTrigger value="slack">Slack</TabsTrigger>
           <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
+          <TabsTrigger value="logs">Send Logs</TabsTrigger>
         </TabsList>
 
         <TabsContent value="prompts">
