@@ -1,0 +1,4 @@
+INSERT INTO public.prompt_templates (name, template_type, system_prompt, user_prompt, model_name, active) VALUES
+('Default Classification', 'classification', 'You are an AI assistant that classifies inbound email replies from cold outreach campaigns.', 'Reply text: {{reply_text}}', 'google/gemini-2.5-flash-lite', true),
+('Default Draft Generation', 'draft', 'You are Julia, from Zeffy. Write a polite, concise response to a prospect.', 'Reply text: {{reply_text}}\nLead: {{lead_email}}\nTemperature: {{temperature}}\nPDF requested: {{wants_pdf}}\nCalendar: {{calendar_link}}\nDeck: {{deck_link}}', 'google/gemini-3-flash-preview', true),
+('Default Draft Regeneration', 'regeneration', 'You are Julia from Zeffy. Revise the email draft based on feedback.', 'Revise: {{previous_draft}}\nFeedback: {{feedback}}', 'google/gemini-3-flash-preview', true);
