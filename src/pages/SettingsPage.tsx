@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { Save, Pencil, CheckCircle, XCircle } from "lucide-react";
 import { PromptTester } from "@/components/cockpit/PromptTester";
+import { SendLogsPanel } from "@/components/settings/SendLogsPanel";
 import { format } from "date-fns";
 
 export default function SettingsPage() {
@@ -109,6 +110,7 @@ export default function SettingsPage() {
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
           <TabsTrigger value="slack">Slack</TabsTrigger>
           <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
+          <TabsTrigger value="logs">Send Logs</TabsTrigger>
         </TabsList>
 
         <TabsContent value="prompts">
@@ -246,6 +248,17 @@ export default function SettingsPage() {
                 </Card>
               ))
             )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="logs">
+          <div className="space-y-4">
+            <div className="bg-primary/5 border border-primary/10 rounded-lg p-3 mb-4">
+              <p className="text-xs text-primary font-medium">
+                Recent email sending attempts via Instantly API. Expand rows to see detailed request/response payloads for debugging.
+              </p>
+            </div>
+            <SendLogsPanel />
           </div>
         </TabsContent>
       </Tabs>
