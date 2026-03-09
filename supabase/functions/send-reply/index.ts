@@ -44,11 +44,10 @@ serve(async (req) => {
 
     // Get settings
     const { data: settings } = await supabase.from("app_settings").select("*").single();
-    const instantlyApiBase = settings?.instantly_api_base_url || "https://api.instantly.ai/api/v1";
+    const instantlyApiBase = settings?.instantly_api_base_url || "https://api.instantly.ai/api/v2";
     const INSTANTLY_API_KEY = Deno.env.get("INSTANTLY_API_KEY");
 
     if (!INSTANTLY_API_KEY) {
-      // Log the attempt but can't send without key
       await supabase.from("send_attempts").insert({
         reply_id,
         draft_version_id: draft.id,
@@ -66,12 +65,11 @@ serve(async (req) => {
       });
     }
 
+    // Instantly API v2 payload — POST /api/v2/emails/{email_id}
+    const emailId = reply.instantly_email_id;
     const sendPayload = {
-      api_key: INSTANTLY_API_KEY,
+      reply_body: draft.draft_html || draft.draft_text,
       eaccount: reply.email_account,
-      reply_to_uuid: reply.instantly_email_id,
-      subject: reply.reply_subject,
-      body: { text: draft.draft_html || draft.draft_text },
     };
 
     let sendResponse;
@@ -79,9 +77,12 @@ serve(async (req) => {
     let success = false;
 
     try {
-      sendResponse = await fetch(`${instantlyApiBase}/unibox/emails/reply`, {
+      sendResponse = await fetch(`${instantlyApiBase}/emails/${emailId}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${INSTANTLY_API_KEY}`,
+        },
         body: JSON.stringify(sendPayload),
       });
       responseBody = await sendResponse.json();
