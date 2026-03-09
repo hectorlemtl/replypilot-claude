@@ -250,6 +250,17 @@ export default function SettingsPage() {
             )}
           </div>
         </TabsContent>
+
+        <TabsContent value="logs">
+          <div className="space-y-4">
+            <div className="bg-primary/5 border border-primary/10 rounded-lg p-3 mb-4">
+              <p className="text-xs text-primary font-medium">
+                Recent email sending attempts via Instantly API. Expand rows to see detailed request/response payloads for debugging.
+              </p>
+            </div>
+            <SendLogsPanel />
+          </div>
+        </TabsContent>
       </Tabs>
     </div>
   );
