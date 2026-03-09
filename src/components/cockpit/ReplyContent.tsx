@@ -116,6 +116,27 @@ export function ReplyContent({ reply, isLoading }: ReplyContentProps) {
             <p className="text-xs text-destructive/80">{reply.processing_error}</p>
           </div>
         )}
+
+        {/* Collapsible raw data */}
+        <div className="mt-6">
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="raw-payload" className="border-border/50 border rounded-lg px-4 bg-card/50">
+              <AccordionTrigger className="py-3 text-xs font-medium hover:no-underline text-muted-foreground hover:text-foreground">
+                <div className="flex items-center gap-2">
+                  <Code className="w-3.5 h-3.5" />
+                  View Raw Webhook Payload
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="bg-muted p-3 rounded-md overflow-x-auto">
+                  <pre className="text-[10px] text-muted-foreground leading-relaxed whitespace-pre-wrap break-all">
+                    {JSON.stringify(reply.raw_payload, null, 2)}
+                  </pre>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
       </div>
     </div>
   );
