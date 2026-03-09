@@ -1,8 +1,14 @@
 import { TemperatureBadge } from "@/components/TemperatureBadge";
 import { StatusBadge } from "@/components/StatusBadge";
-import { ExternalLink, Check, X, FileText, Clock } from "lucide-react";
+import { ExternalLink, Check, X, FileText, Clock, Code } from "lucide-react";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 interface ReplyContentProps {
   reply: any;
