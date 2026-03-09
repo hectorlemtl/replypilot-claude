@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { Save, Pencil, CheckCircle, XCircle } from "lucide-react";
 import { PromptTester } from "@/components/cockpit/PromptTester";
+import { SendLogsPanel } from "@/components/settings/SendLogsPanel";
 import { format } from "date-fns";
 
 export default function SettingsPage() {
