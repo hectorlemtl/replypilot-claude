@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { callAnthropic } from "../_shared/anthropic.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -63,11 +64,7 @@ serve(async (req) => {
       return respond({ classified: "cold", reason: "negative_pattern" });
     }
 
-    // AI classification
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
-
-    // Get active classification prompt
+    // AI classification via Anthropic Claude
     const { data: template } = await supabase
       .from("prompt_templates")
       .select("*")
@@ -77,59 +74,35 @@ serve(async (req) => {
 
     const systemPrompt = template?.system_prompt || "Classify this email reply.";
     const userPrompt = (template?.user_prompt || "{{reply_text}}").replace("{{reply_text}}", text);
-    const model = template?.model_name || "google/gemini-2.5-flash-lite";
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        tools: [{
-          type: "function",
-          function: {
-            name: "classify_reply",
-            description: "Classify an email reply",
-            parameters: {
-              type: "object",
-              properties: {
-                category: { type: "string", enum: ["hot", "warm", "for_later", "cold", "out_of_office"] },
-                reasoning: { type: "string" },
-                wants_pdf: { type: "boolean" },
-                simple_affirmative: { type: "boolean" },
-                sentiment: { type: "string", enum: ["positive", "neutral", "negative", "auto_reply"] },
-              },
-              required: ["category", "reasoning", "wants_pdf", "simple_affirmative", "sentiment"],
-            },
+    const classification = await callAnthropic({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 1024,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userPrompt }],
+      tools: [{
+        name: "classify_reply",
+        description: "Classify an email reply",
+        input_schema: {
+          type: "object",
+          properties: {
+            category: { type: "string", enum: ["hot", "warm", "for_later", "cold", "out_of_office"], description: "Lead temperature classification" },
+            reasoning: { type: "string", description: "Brief explanation of the classification" },
+            wants_pdf: { type: "string", enum: ["true", "false"], description: "Whether the lead wants a PDF/deck" },
+            simple_affirmative: { type: "string", enum: ["true", "false"], description: "Whether this is a simple yes/affirmative reply" },
+            sentiment: { type: "string", enum: ["positive", "neutral", "negative", "auto_reply"], description: "Overall sentiment" },
           },
-        }],
-        tool_choice: { type: "function", function: { name: "classify_reply" } },
-      }),
+          required: ["category", "reasoning", "wants_pdf", "simple_affirmative", "sentiment"],
+        },
+      }],
+      tool_choice: { type: "tool", name: "classify_reply" },
     });
 
-    if (!aiResponse.ok) {
-      const errText = await aiResponse.text();
-      console.error("AI error:", aiResponse.status, errText);
-      await supabase.from("inbound_replies").update({
-        status: "classified",
-        processing_error: `AI classification failed: ${aiResponse.status}`,
-      }).eq("id", reply_id);
-      return new Response(JSON.stringify({ error: "AI classification failed" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const aiData = await aiResponse.json();
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    const classification = JSON.parse(toolCall?.function?.arguments || "{}");
-
-    const { category, reasoning, wants_pdf, simple_affirmative, sentiment } = classification;
+    const category = classification.category as string;
+    const reasoning = classification.reasoning as string;
+    const wants_pdf = classification.wants_pdf === "true" || classification.wants_pdf === true;
+    const simple_affirmative = classification.simple_affirmative === "true" || classification.simple_affirmative === true;
+    const sentiment = classification.sentiment as string;
 
     const shouldSkip = ["cold", "for_later", "out_of_office"].includes(category);
     const newStatus = shouldSkip ? "skipped" : "classified";
