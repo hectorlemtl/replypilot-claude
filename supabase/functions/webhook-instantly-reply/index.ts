@@ -37,8 +37,12 @@ serve(async (req) => {
       });
     }
 
-    // Extract lead name from email if possible
-    const leadName = lead_email.split("@")[0].replace(/[._-]/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
+    // Use firstName/lastName from Instantly campaign data, fall back to email parsing
+    const firstName = (payload.firstName || "").trim();
+    const lastName = (payload.lastName || "").trim();
+    const leadName = firstName || lastName
+      ? [firstName, lastName].filter(Boolean).join(" ")
+      : lead_email.split("@")[0].replace(/[._-]/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
 
     // Extract CC emails from payload (may come as string, array, or comma-separated)
     let ccEmails: string[] = [];

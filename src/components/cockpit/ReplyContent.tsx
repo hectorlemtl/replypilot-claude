@@ -58,49 +58,39 @@ export function ReplyContent({ reply, isLoading }: ReplyContentProps) {
           )}
         </div>
 
-        {/* Compact metadata row */}
-        <div className="flex items-center gap-3 text-[11px] text-muted-foreground flex-wrap">
-          <span>{reply.lead_email}</span>
+        {/* Email header — From / To / CC */}
+        <div className="text-[11px] text-muted-foreground space-y-0.5">
+          <div><span className="font-medium text-foreground/70 w-8 inline-block">From:</span> {reply.lead_name || reply.lead_email} &lt;{reply.lead_email}&gt;</div>
+          {reply.email_account && (
+            <div><span className="font-medium text-foreground/70 w-8 inline-block">To:</span> {reply.email_account}</div>
+          )}
           {reply.cc_emails && reply.cc_emails.length > 0 && (
-            <>
-              <span className="text-border">|</span>
-              <span className="flex items-center gap-1">
-                <span className="font-medium">CC:</span> {reply.cc_emails.join(", ")}
-              </span>
-            </>
+            <div><span className="font-medium text-foreground/70 w-8 inline-block">CC:</span> {reply.cc_emails.join(", ")}</div>
           )}
           {reply.reply_subject && (
-            <>
-              <span className="text-border">|</span>
-              <span className="truncate max-w-[200px]">{reply.reply_subject}</span>
-            </>
+            <div><span className="font-medium text-foreground/70 w-8 inline-block">Re:</span> {reply.reply_subject}</div>
           )}
+        </div>
+
+        {/* Meta badges */}
+        <div className="flex items-center gap-3 text-[11px] text-muted-foreground flex-wrap">
           {reply.received_at && (
-            <>
-              <span className="text-border">|</span>
-              <span className="flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                {format(new Date(reply.received_at), "MMM d, h:mm a")}
-              </span>
-            </>
+            <span className="flex items-center gap-1">
+              <Clock className="w-3 h-3" />
+              {format(new Date(reply.received_at), "MMM d, h:mm a")}
+            </span>
           )}
           {reply.wants_pdf && (
-            <>
-              <span className="text-border">|</span>
-              <span className="flex items-center gap-1 text-primary font-medium">
-                <FileText className="w-3 h-3" />
-                Wants PDF
-              </span>
-            </>
+            <span className="flex items-center gap-1 text-primary font-medium">
+              <FileText className="w-3 h-3" />
+              Wants PDF
+            </span>
           )}
           {reply.simple_affirmative && (
-            <>
-              <span className="text-border">|</span>
-              <span className="flex items-center gap-1 text-success font-medium">
-                <Check className="w-3 h-3" />
-                Simple yes
-              </span>
-            </>
+            <span className="flex items-center gap-1 text-success font-medium">
+              <Check className="w-3 h-3" />
+              Simple yes
+            </span>
           )}
         </div>
       </div>
