@@ -61,6 +61,14 @@ export function ReplyContent({ reply, isLoading }: ReplyContentProps) {
         {/* Compact metadata row */}
         <div className="flex items-center gap-3 text-[11px] text-muted-foreground flex-wrap">
           <span>{reply.lead_email}</span>
+          {reply.cc_emails && reply.cc_emails.length > 0 && (
+            <>
+              <span className="text-border">|</span>
+              <span className="flex items-center gap-1">
+                <span className="font-medium">CC:</span> {reply.cc_emails.join(", ")}
+              </span>
+            </>
+          )}
           {reply.reply_subject && (
             <>
               <span className="text-border">|</span>

@@ -72,7 +72,6 @@ serve(async (req) => {
     }
 
     // Instantly API v2 — POST /api/v2/emails/reply
-    // Docs: https://developer.instantly.ai/api/v2/email/replytoemail
     // Required fields: reply_to_uuid, eaccount, subject, body { html?, text? }
     const sendPayload: Record<string, unknown> = {
       reply_to_uuid: reply.instantly_email_id,
@@ -83,11 +82,6 @@ serve(async (req) => {
         text: draft.draft_text || undefined,
       },
     };
-
-    // Include CC recipients if the inbound reply had CC'd people
-    if (reply.cc_emails && reply.cc_emails.length > 0) {
-      sendPayload.cc_address_email_list = reply.cc_emails;
-    }
 
     let sendResponse;
     let responseBody;
