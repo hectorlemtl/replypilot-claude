@@ -3,7 +3,8 @@ import { cn } from "@/lib/utils";
 
 const tempConfig: Record<string, { label: string; className: string; icon: string }> = {
   hot: { label: "Hot", className: "bg-destructive/10 text-destructive border-destructive/30", icon: "🔥" },
-  warm: { label: "Warm", className: "bg-warning/15 text-warning-foreground border-warning/30", icon: "☀️" },
+  warm: { label: "Hot", className: "bg-destructive/10 text-destructive border-destructive/30", icon: "🔥" },
+  simple: { label: "Simple", className: "bg-green-500/10 text-green-600 border-green-500/30", icon: "⚡" },
   for_later: { label: "For later", className: "bg-primary/10 text-primary border-primary/30", icon: "⏳" },
   cold: { label: "Cold", className: "bg-muted text-muted-foreground", icon: "❄️" },
   out_of_office: { label: "OOO", className: "bg-muted text-muted-foreground", icon: "✈️" },

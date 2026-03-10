@@ -60,7 +60,7 @@ export const ReplyQueue = forwardRef<HTMLInputElement, ReplyQueueProps>(
           ) : (
             replies.map((reply) => {
               const isSelected = reply.id === selectedId;
-              const isHot = reply.temperature === "hot";
+              const isHot = reply.temperature === "hot" || reply.temperature === "warm";
               const waitTime = reply.received_at
                 ? formatDistanceToNow(new Date(reply.received_at), { addSuffix: false })
                 : null;

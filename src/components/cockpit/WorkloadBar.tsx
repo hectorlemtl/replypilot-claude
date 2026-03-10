@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { QueueFilter } from "@/hooks/useCockpitData";
-import { Flame, Sun, AlertTriangle, Eye, Keyboard } from "lucide-react";
+import { Flame, Zap, AlertTriangle, Eye, Keyboard } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { SHORTCUTS } from "@/hooks/useKeyboardShortcuts";
 import { useState } from "react";
@@ -13,7 +13,7 @@ interface WorkloadBarProps {
 
 const FILTERS: { key: QueueFilter; label: string; icon: typeof Flame; urgent?: boolean }[] = [
   { key: "hot_review", label: "Hot", icon: Flame, urgent: true },
-  { key: "warm_review", label: "Warm", icon: Sun, urgent: true },
+  { key: "simple_review", label: "Simple", icon: Zap, urgent: true },
   { key: "failed", label: "Failed", icon: AlertTriangle, urgent: true },
   { key: "manual_review", label: "Manual", icon: Eye },
   { key: "all", label: "All", icon: Eye },
@@ -44,7 +44,7 @@ export function WorkloadBar({ counts, activeFilter, onFilterChange }: WorkloadBa
             )}
           >
             {key === "hot_review" && <Flame className="w-3 h-3" />}
-            {key === "warm_review" && <Sun className="w-3 h-3" />}
+            {key === "simple_review" && <Zap className="w-3 h-3" />}
             {key === "failed" && <AlertTriangle className="w-3 h-3" />}
             {label}
             {count > 0 && (

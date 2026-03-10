@@ -395,7 +395,7 @@ export type Database = {
         | "sent"
         | "manual_review"
         | "failed"
-      reply_temperature: "hot" | "warm" | "for_later" | "cold" | "out_of_office"
+      reply_temperature: "hot" | "warm" | "simple" | "for_later" | "cold" | "out_of_office"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -537,7 +537,7 @@ export const Constants = {
         "manual_review",
         "failed",
       ],
-      reply_temperature: ["hot", "warm", "for_later", "cold", "out_of_office"],
+      reply_temperature: ["hot", "warm", "simple", "for_later", "cold", "out_of_office"],
     },
   },
 } as const

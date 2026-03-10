@@ -86,7 +86,7 @@ serve(async (req) => {
         input_schema: {
           type: "object",
           properties: {
-            category: { type: "string", enum: ["hot", "warm", "for_later", "cold", "out_of_office"], description: "Lead temperature classification" },
+            category: { type: "string", enum: ["hot", "simple", "for_later", "cold", "out_of_office"], description: "Lead temperature classification. 'hot' = interested lead needing a thoughtful reply. 'simple' = easy to answer (simple affirmative, quick yes, short acknowledgment) that could be auto-replied." },
             reasoning: { type: "string", description: "Brief explanation of the classification" },
             wants_pdf: { type: "string", enum: ["true", "false"], description: "Whether the lead wants a PDF/deck" },
             simple_affirmative: { type: "string", enum: ["true", "false"], description: "Whether this is a simple yes/affirmative reply" },
@@ -109,7 +109,7 @@ serve(async (req) => {
 
     await updateReply(supabase, reply_id, newStatus, category, reasoning, wants_pdf, simple_affirmative, sentiment);
 
-    // If hot or warm, trigger draft generation
+    // If hot or simple, trigger draft generation
     if (!shouldSkip) {
       const draftUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/generate-draft`;
       fetch(draftUrl, {

@@ -3,14 +3,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useCallback, useState, useMemo } from "react";
 
-export type QueueFilter = "hot_review" | "warm_review" | "failed" | "manual_review" | "all" | "sent" | "skipped";
+export type QueueFilter = "hot_review" | "simple_review" | "failed" | "manual_review" | "all" | "sent" | "skipped";
 
 const PRIORITY_ORDER: Record<string, number> = {
   hot: 0,
-  warm: 1,
-  for_later: 2,
-  cold: 3,
-  out_of_office: 4,
+  simple: 1,
+  warm: 2,
+  for_later: 3,
+  cold: 4,
+  out_of_office: 5,
 };
 
 export function useCockpitData() {
@@ -34,10 +35,10 @@ export function useCockpitData() {
   });
 
   const counts = useMemo(() => {
-    if (!allReplies) return { hot_review: 0, warm_review: 0, failed: 0, manual_review: 0, all: 0, sent: 0, skipped: 0 };
+    if (!allReplies) return { hot_review: 0, simple_review: 0, failed: 0, manual_review: 0, all: 0, sent: 0, skipped: 0 };
     return {
-      hot_review: allReplies.filter(r => r.temperature === "hot" && ["awaiting_review", "regenerated"].includes(r.status)).length,
-      warm_review: allReplies.filter(r => r.temperature === "warm" && ["awaiting_review", "regenerated"].includes(r.status)).length,
+      hot_review: allReplies.filter(r => (r.temperature === "hot" || r.temperature === "warm") && ["awaiting_review", "regenerated"].includes(r.status)).length,
+      simple_review: allReplies.filter(r => r.temperature === "simple" && ["awaiting_review", "regenerated"].includes(r.status)).length,
       failed: allReplies.filter(r => r.status === "failed").length,
       manual_review: allReplies.filter(r => r.status === "manual_review").length,
       all: allReplies.length,
@@ -57,10 +58,10 @@ export function useCockpitData() {
 
       switch (activeFilter) {
         case "hot_review":
-          query = query.eq("temperature", "hot" as any).in("status", ["awaiting_review", "regenerated"] as any);
+          query = query.in("temperature", ["hot", "warm"] as any).in("status", ["awaiting_review", "regenerated"] as any);
           break;
-        case "warm_review":
-          query = query.eq("temperature", "warm" as any).in("status", ["awaiting_review", "regenerated"] as any);
+        case "simple_review":
+          query = query.eq("temperature", "simple" as any).in("status", ["awaiting_review", "regenerated"] as any);
           break;
         case "failed":
           query = query.eq("status", "failed" as any);
