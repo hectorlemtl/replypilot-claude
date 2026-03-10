@@ -20,7 +20,7 @@ export const ReplyQueue = forwardRef<HTMLInputElement, ReplyQueueProps>(
   ({ replies, selectedId, onSelect, search, onSearchChange, isLoading }, ref) => {
     if (isLoading) {
       return (
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col flex-1 min-h-0">
           <div className="p-2 border-b border-border">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
@@ -35,7 +35,7 @@ export const ReplyQueue = forwardRef<HTMLInputElement, ReplyQueueProps>(
     }
 
     return (
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col flex-1 min-h-0">
         {/* Search */}
         <div className="p-2 border-b border-border shrink-0">
           <div className="relative">

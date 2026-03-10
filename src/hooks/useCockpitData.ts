@@ -2,8 +2,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useCallback, useState, useMemo } from "react";
+import { startOfDay, subDays } from "date-fns";
 
 export type QueueFilter = "hot_review" | "simple_review" | "failed" | "manual_review" | "all" | "sent" | "skipped";
+export type DatePreset = "all" | "today" | "yesterday" | "last7" | "last30" | "custom";
+export type SortBy = "newest" | "oldest" | "hot_first" | "failed_first" | "awaiting_first";
 
 const PRIORITY_ORDER: Record<string, number> = {
   hot: 0,
@@ -14,12 +17,101 @@ const PRIORITY_ORDER: Record<string, number> = {
   out_of_office: 5,
 };
 
+const STATUS_PRIORITY: Record<string, number> = {
+  failed: 0,
+  awaiting_review: 1,
+  regenerated: 2,
+  manual_review: 3,
+  received: 4,
+  classified: 5,
+  drafted: 6,
+  approved: 7,
+  sent: 8,
+  rejected: 9,
+  skipped: 10,
+};
+
+function getDateRange(preset: DatePreset, customFrom?: string, customTo?: string): { from: Date | null; to: Date | null } {
+  const now = new Date();
+  switch (preset) {
+    case "today":
+      return { from: startOfDay(now), to: null };
+    case "yesterday":
+      return { from: startOfDay(subDays(now, 1)), to: startOfDay(now) };
+    case "last7":
+      return { from: startOfDay(subDays(now, 7)), to: null };
+    case "last30":
+      return { from: startOfDay(subDays(now, 30)), to: null };
+    case "custom":
+      return {
+        from: customFrom ? startOfDay(new Date(customFrom)) : null,
+        to: customTo ? new Date(new Date(customTo).getTime() + 86400000) : null, // end of day
+      };
+    default:
+      return { from: null, to: null };
+  }
+}
+
+export function filterByDate<T extends { received_at: string | null }>(
+  items: T[],
+  preset: DatePreset,
+  customFrom?: string,
+  customTo?: string,
+): T[] {
+  if (preset === "all") return items;
+  const { from, to } = getDateRange(preset, customFrom, customTo);
+  return items.filter((item) => {
+    if (!item.received_at) return false;
+    const date = new Date(item.received_at);
+    if (from && date < from) return false;
+    if (to && date >= to) return false;
+    return true;
+  });
+}
+
+export function sortReplies<T extends { received_at: string | null; temperature?: string | null; status: string }>(
+  items: T[],
+  sortBy: SortBy,
+): T[] {
+  const sorted = [...items];
+  sorted.sort((a, b) => {
+    switch (sortBy) {
+      case "newest":
+        return new Date(b.received_at || 0).getTime() - new Date(a.received_at || 0).getTime();
+      case "oldest":
+        return new Date(a.received_at || 0).getTime() - new Date(b.received_at || 0).getTime();
+      case "hot_first": {
+        const pa = PRIORITY_ORDER[a.temperature || ""] ?? 99;
+        const pb = PRIORITY_ORDER[b.temperature || ""] ?? 99;
+        return pa !== pb ? pa - pb : new Date(b.received_at || 0).getTime() - new Date(a.received_at || 0).getTime();
+      }
+      case "failed_first": {
+        const fa = a.status === "failed" ? 0 : 1;
+        const fb = b.status === "failed" ? 0 : 1;
+        return fa !== fb ? fa - fb : new Date(b.received_at || 0).getTime() - new Date(a.received_at || 0).getTime();
+      }
+      case "awaiting_first": {
+        const sa = STATUS_PRIORITY[a.status] ?? 99;
+        const sb = STATUS_PRIORITY[b.status] ?? 99;
+        return sa !== sb ? sa - sb : new Date(b.received_at || 0).getTime() - new Date(a.received_at || 0).getTime();
+      }
+      default:
+        return 0;
+    }
+  });
+  return sorted;
+}
+
 export function useCockpitData() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<QueueFilter>("hot_review");
   const [search, setSearch] = useState("");
+  const [datePreset, setDatePreset] = useState<DatePreset>("all");
+  const [customDateFrom, setCustomDateFrom] = useState("");
+  const [customDateTo, setCustomDateTo] = useState("");
+  const [sortBy, setSortBy] = useState<SortBy>("oldest");
 
   // All replies for counting
   const { data: allReplies } = useQuery({
@@ -121,8 +213,12 @@ export function useCockpitData() {
     enabled: !!selectedId,
   });
 
-  // Auto-select first if nothing selected
-  const queue = queueReplies || [];
+  // Apply client-side date filter and sorting on top of DB-filtered results
+  const queue = useMemo(() => {
+    const raw = queueReplies || [];
+    const dated = filterByDate(raw, datePreset, customDateFrom, customDateTo);
+    return sortReplies(dated, sortBy);
+  }, [queueReplies, datePreset, customDateFrom, customDateTo, sortBy]);
 
   const selectNext = useCallback(() => {
     if (!queue.length) { setSelectedId(null); return; }
@@ -143,6 +239,15 @@ export function useCockpitData() {
       setSelectedId(queue[currentIdx - 1].id);
     }
   }, [queue, selectedId]);
+
+  const clearFilters = useCallback(() => {
+    setDatePreset("all");
+    setCustomDateFrom("");
+    setCustomDateTo("");
+    setSortBy("oldest");
+  }, []);
+
+  const hasActiveFilters = datePreset !== "all" || sortBy !== "oldest";
 
   const invalidateAll = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["cockpit_all_replies"] });
@@ -277,6 +382,17 @@ export function useCockpitData() {
     setActiveFilter,
     search,
     setSearch,
+    // Date & sort filters
+    datePreset,
+    setDatePreset,
+    customDateFrom,
+    setCustomDateFrom,
+    customDateTo,
+    setCustomDateTo,
+    sortBy,
+    setSortBy,
+    clearFilters,
+    hasActiveFilters,
     // Data
     counts,
     queue,

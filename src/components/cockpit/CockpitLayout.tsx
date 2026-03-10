@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { WorkloadBar } from "./WorkloadBar";
+import { QueueFilters } from "./QueueFilters";
 import { ReplyQueue } from "./ReplyQueue";
 import { ReplyContent } from "./ReplyContent";
 import { DraftPanel } from "./DraftPanel";
@@ -63,15 +64,29 @@ export function CockpitLayout() {
       <ResizablePanelGroup direction="horizontal" className="flex-1">
         {/* Left: Queue */}
         <ResizablePanel defaultSize={22} minSize={16} maxSize={35}>
-          <ReplyQueue
-            ref={searchRef}
-            replies={data.queue}
-            selectedId={data.selectedId}
-            onSelect={data.setSelectedId}
-            search={data.search}
-            onSearchChange={data.setSearch}
-            isLoading={data.queueLoading}
-          />
+          <div className="flex flex-col h-full">
+            <QueueFilters
+              datePreset={data.datePreset}
+              onDatePresetChange={data.setDatePreset}
+              customDateFrom={data.customDateFrom}
+              onCustomDateFromChange={data.setCustomDateFrom}
+              customDateTo={data.customDateTo}
+              onCustomDateToChange={data.setCustomDateTo}
+              sortBy={data.sortBy}
+              onSortByChange={data.setSortBy}
+              onClear={data.clearFilters}
+              hasActiveFilters={data.hasActiveFilters}
+            />
+            <ReplyQueue
+              ref={searchRef}
+              replies={data.queue}
+              selectedId={data.selectedId}
+              onSelect={data.setSelectedId}
+              search={data.search}
+              onSearchChange={data.setSearch}
+              isLoading={data.queueLoading}
+            />
+          </div>
         </ResizablePanel>
 
         <ResizableHandle />
