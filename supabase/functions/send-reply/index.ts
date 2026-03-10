@@ -107,6 +107,11 @@ serve(async (req) => {
       },
     };
 
+    // Include CC recipients if available
+    if (reply.cc_emails && Array.isArray(reply.cc_emails) && reply.cc_emails.length > 0) {
+      sendPayload.cc = reply.cc_emails.join(", ");
+    }
+
     let sendResponse;
     let responseBody;
     let success = false;
