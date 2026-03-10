@@ -71,6 +71,30 @@ serve(async (req) => {
       });
     }
 
+    // Build full email body with quoted previous conversation (Gmail style)
+    const receivedDate = reply.received_at
+      ? new Date(reply.received_at).toLocaleString("en-US", { weekday: "short", year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+      : "";
+    const senderName = reply.lead_name || reply.lead_email;
+    const senderEmail = reply.lead_email;
+
+    // HTML version: draft + quoted original
+    let fullHtml = draft.draft_html || `<p>${(draft.draft_text || "").replace(/\n\n/g, "</p><p>").replace(/\n/g, "<br>")}</p>`;
+    if (reply.reply_html || reply.reply_text) {
+      const quotedHtml = reply.reply_html || `<p>${(reply.reply_text || "").replace(/\n\n/g, "</p><p>").replace(/\n/g, "<br>")}</p>`;
+      fullHtml += `<br><br><div style="border-left:1px solid #ccc;padding-left:12px;margin-left:0;color:#555">` +
+        `<p style="color:#888;font-size:12px">On ${receivedDate}, ${senderName} &lt;${senderEmail}&gt; wrote:</p>` +
+        quotedHtml +
+        `</div>`;
+    }
+
+    // Text version: draft + quoted original
+    let fullText = draft.draft_text || "";
+    if (reply.reply_text) {
+      const quotedLines = reply.reply_text.split("\n").map((l: string) => `> ${l}`).join("\n");
+      fullText += `\n\nOn ${receivedDate}, ${senderName} <${senderEmail}> wrote:\n${quotedLines}`;
+    }
+
     // Instantly API v2 — POST /api/v2/emails/reply
     // Required fields: reply_to_uuid, eaccount, subject, body { html?, text? }
     const sendPayload: Record<string, unknown> = {
@@ -78,8 +102,8 @@ serve(async (req) => {
       eaccount: reply.email_account,
       subject: reply.reply_subject?.startsWith("Re:") ? reply.reply_subject : `Re: ${reply.reply_subject || ""}`,
       body: {
-        html: draft.draft_html || undefined,
-        text: draft.draft_text || undefined,
+        html: fullHtml,
+        text: fullText,
       },
     };
 
