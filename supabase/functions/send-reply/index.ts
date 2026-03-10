@@ -67,10 +67,15 @@ serve(async (req) => {
 
     // Instantly API v2 payload — POST /api/v2/emails/{email_id}
     const emailId = reply.instantly_email_id;
-    const sendPayload = {
+    const sendPayload: Record<string, unknown> = {
       reply_body: draft.draft_html || draft.draft_text,
       eaccount: reply.email_account,
     };
+
+    // Include CC recipients if the inbound reply had CC'd people
+    if (reply.cc_emails && reply.cc_emails.length > 0) {
+      sendPayload.cc = reply.cc_emails;
+    }
 
     let sendResponse;
     let responseBody;

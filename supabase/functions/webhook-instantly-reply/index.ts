@@ -11,7 +11,7 @@ serve(async (req) => {
 
   try {
     const payload = await req.json();
-    const { email_id, unibox_url, is_first, lead_email, reply_html, reply_text, email_account, reply_subject } = payload;
+    const { email_id, unibox_url, is_first, lead_email, reply_html, reply_text, email_account, reply_subject, cc } = payload;
 
     if (!email_id || !lead_email) {
       return new Response(JSON.stringify({ error: "Missing required fields: email_id, lead_email" }), {
@@ -40,6 +40,16 @@ serve(async (req) => {
     // Extract lead name from email if possible
     const leadName = lead_email.split("@")[0].replace(/[._-]/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
 
+    // Extract CC emails from payload (may come as string, array, or comma-separated)
+    let ccEmails: string[] = [];
+    if (cc) {
+      if (Array.isArray(cc)) {
+        ccEmails = cc.map((e: string) => e.trim()).filter(Boolean);
+      } else if (typeof cc === "string") {
+        ccEmails = cc.split(",").map((e: string) => e.trim()).filter(Boolean);
+      }
+    }
+
     const { data: reply, error: insertError } = await supabase.from("inbound_replies").insert({
       instantly_email_id: email_id,
       instantly_unibox_url: unibox_url || null,
@@ -51,6 +61,7 @@ serve(async (req) => {
       reply_html: reply_html || null,
       raw_payload: payload,
       is_first_reply: is_first === true || is_first === "true",
+      cc_emails: ccEmails.length > 0 ? ccEmails : null,
       status: "received",
     }).select("id").single();
 
