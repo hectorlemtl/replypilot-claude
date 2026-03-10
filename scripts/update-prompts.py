@@ -1,19 +1,84 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { callAnthropic } from "../_shared/anthropic.ts";
+#!/usr/bin/env python3
+"""Update prompt_templates in Supabase with full detailed prompts."""
+import json
+import urllib.request
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+BASE_URL = "https://wuepkorqdnabfxtynytf.supabase.co/rest/v1"
+ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1ZXBrb3JxZG5hYmZ4dHlueXRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5NzgyNTIsImV4cCI6MjA4ODU1NDI1Mn0.z8AdcXBjFLAYkS0cs-AZKXYQw3I019DdK4VvyKUIhKQ"
 
-const DRAFT_SYSTEM_PROMPT = `You are an email copywriter assistant.
+HEADERS = {
+    "apikey": ANON_KEY,
+    "Authorization": f"Bearer {ANON_KEY}",
+    "Content-Type": "application/json",
+    "Prefer": "return=minimal",
+}
+
+# ── Classification prompt ──
+CLASSIFICATION_SYSTEM = """Classify this email reply from a nonprofit lead in Zeffy's PayPal migration outreach campaign.
+
+You are analyzing replies to cold outreach emails sent by Julia Manoukian (Head of Brand and Community at Zeffy) offering nonprofits a PayPal vs Zeffy comparison deck.
+
+CONTEXT: Zeffy is a 100% free fundraising platform for nonprofits. Julia's outreach targets nonprofits currently using PayPal for donations, offering to show them how much they could save by switching to Zeffy.
+
+CLASSIFICATION RULES:
+
+1. **hot** — The lead shows genuine interest that requires a thoughtful, personalized reply. Examples:
+   - Asks specific questions about Zeffy features, pricing, migration, or how it works
+   - Asks about fees, business model, "what's the catch", or how Zeffy makes money
+   - Requests a demo, call, or meeting
+   - Wants to share info with their team, board, or ED
+   - Asks for references, case studies, or proof
+   - Shows interest but has concerns or objections to address
+   - Mentions they're evaluating alternatives or considering switching
+
+2. **simple** — Easy to answer, could potentially be auto-replied. Examples:
+   - Simple "yes", "sure", "send it over", "sounds good" — agreeing to receive the deck
+   - Brief affirmative with no additional questions
+   - Short acknowledgment like "thanks, I'll take a look"
+   - "Yes please" or similar one-line agreements
+   - Ready to sign up / asks for registration link with no other questions
+
+3. **for_later** — Not ready now but potentially interested later. Examples:
+   - "Not right now but maybe later"
+   - "We're in the middle of something, circle back in Q3"
+   - "Interesting, but we just renewed our PayPal contract"
+   - Asks to be contacted again at a future date
+
+4. **cold** — Not interested, negative, or irrelevant. Examples:
+   - "Not interested", "No thanks", "Please remove me"
+   - "Wrong person", "I don't handle this"
+   - Hostile or rude responses
+   - Completely unrelated replies
+   - Unsubscribe requests
+
+5. **out_of_office** — Automated away/vacation replies. Examples:
+   - "I'm out of the office until..."
+   - Auto-reply / automatic response
+   - "Currently away from email"
+   - Vacation or leave notices
+
+ADDITIONAL ANALYSIS:
+- **wants_pdf**: Does the lead explicitly or implicitly want to receive the comparison deck/PDF/one-pager?
+- **simple_affirmative**: Is this a simple yes/agreement with no additional questions? (true only for brief affirmatives)
+- **sentiment**: Overall emotional tone — positive, neutral, negative, or auto_reply"""
+
+CLASSIFICATION_USER = """Classify the following email reply from a nonprofit lead.
+
+Email text:
+\"\"\"
+{{reply_text}}
+\"\"\"
+
+Analyze the reply and classify it according to the system instructions."""
+
+# ── Draft generation prompts ──
+DRAFT_SYSTEM = """You are an email copywriter assistant.
 
 MAKE SURE NEVER TO USE "\u2014" or any "--" or any "-" in middle of sentence between words like an AI is doing.
 
-Example of wrong structure: "Here is your PayPal vs Zeffy comparison deck\u2014it includes a fee breakdown, feature comparison, and real case studies from nonprofits who made the switch"`;
+Example of wrong structure: "Here is your PayPal vs Zeffy comparison deck\u2014it includes a fee breakdown, feature comparison, and real case studies from nonprofits who made the switch\""""
 
-const DRAFT_USER_PROMPT = `#CONTEXT#
+DRAFT_USER = """#CONTEXT#
 
 You are an assistant that drafts email replies for Zeffy's PayPal migration campaign. Use only the provided inputs and campaign resources to craft concise, on-voice responses that either deliver the PayPal vs Zeffy comparison deck, answer questions accurately, or guide warm leads toward the right next step.
 
@@ -221,112 +286,55 @@ Only include ONE relevant KB link per reply. Do not list multiple links.
 
 - Start with: "Hi {firstName}," or "Hey {firstName}," (infer first name from Lead Name or originalEmail if present; otherwise use "Hi there,").
 
-- End with: "Best," or "Warmly," + "Julia" on the next line.`;
+- End with: "Best," or "Warmly," + "Julia" on the next line."""
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+# ── Regeneration prompt ──
+REGEN_SYSTEM = """You are Julia from Zeffy, revising an email draft based on human feedback.
 
-  try {
-    const { reply_id } = await req.json();
-    if (!reply_id) {
-      return new Response(JSON.stringify({ error: "Missing reply_id" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+CRITICAL RULES:
+- MAKE SURE NEVER TO USE em-dashes or any "--" or any "-" in middle of sentence between words like an AI is doing.
+- Keep Julia's warm, helpful, concise voice. 4-7 sentences max.
+- Apply the feedback precisely. Do not add content the feedback didn't ask for.
+- DO NOT offer 1-on-1 calls or personal time slots. Always redirect to demo booking page if a demo is needed.
+- DO NOT invent facts, savings figures, or fictional case studies.
+- Zeffy is 100% free for nonprofits. Zeffy serves 100,000+ nonprofits.
+- Sign as "Julia" only.
+- Email body text only (no subject line)."""
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+REGEN_USER = """Original draft:
+\"\"\"
+{{previous_draft}}
+\"\"\"
 
-    const { data: reply } = await supabase.from("inbound_replies").select("*").eq("id", reply_id).single();
-    if (!reply) throw new Error("Reply not found");
+Feedback to apply:
+\"\"\"
+{{feedback}}
+\"\"\"
 
-    // Get settings
-    const { data: settings } = await supabase.from("app_settings").select("*").single();
+Please revise the draft according to the feedback. Keep the same general structure unless the feedback says otherwise. Output only the revised email body."""
 
-    // Get campaign context
-    let campaignDeck = settings?.default_deck_link || "";
-    let campaignCalendar = settings?.default_calendar_link || "";
-    if (reply.campaign_id) {
-      const { data: campaign } = await supabase.from("campaigns").select("*").eq("id", reply.campaign_id).single();
-      if (campaign?.deck_link) campaignDeck = campaign.deck_link;
-      if (campaign?.calendar_link) campaignCalendar = campaign.calendar_link;
-    }
 
-    // Check if there's a custom template override in the DB
-    const { data: template } = await supabase
-      .from("prompt_templates")
-      .select("*")
-      .eq("template_type", "draft_generation")
-      .eq("active", true)
-      .single();
+def update_template(template_id, system_prompt, user_prompt):
+    url = f"{BASE_URL}/prompt_templates?id=eq.{template_id}"
+    data = json.dumps({
+        "system_prompt": system_prompt,
+        "user_prompt": user_prompt,
+    }).encode()
+    req = urllib.request.Request(url, data=data, method="PATCH", headers=HEADERS)
+    try:
+        resp = urllib.request.urlopen(req)
+        print(f"  Updated {template_id}: {resp.status}")
+    except urllib.error.HTTPError as e:
+        print(f"  ERROR {template_id}: {e.code} {e.read().decode()}")
 
-    // Build the prompt with all available data — use DB template if available, fallback to hardcoded
-    const rawUserPrompt = template?.user_prompt || DRAFT_USER_PROMPT;
-    const userPrompt = rawUserPrompt
-      .replace(/\{\{reply_text\}\}/g, reply.reply_text || "")
-      .replace(/\{\{reasoning\}\}/g, reply.reasoning || "")
-      .replace(/\{\{temperature\}\}/g, reply.temperature || "")
-      .replace(/\{\{wants_pdf\}\}/g, String(reply.wants_pdf || false))
-      .replace(/\{\{is_first_reply\}\}/g, String(reply.is_first_reply || false))
-      .replace(/\{\{lead_name\}\}/g, reply.sender_name || reply.lead_name || reply.lead_email || "")
-      .replace(/\{\{deck_link\}\}/g, campaignDeck)
-      .replace(/\{\{calendar_link\}\}/g, campaignCalendar);
 
-    const systemPrompt = template?.system_prompt || DRAFT_SYSTEM_PROMPT;
+print("Updating Classification prompt...")
+update_template("0d9faa11-f586-4baa-9989-a0b870bad7fb", CLASSIFICATION_SYSTEM, CLASSIFICATION_USER)
 
-    const result = await callAnthropic({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 2048,
-      system: systemPrompt,
-      messages: [{ role: "user", content: userPrompt }],
-      tools: [{
-        name: "generate_draft",
-        description: "Generate an email draft reply",
-        input_schema: {
-          type: "object",
-          properties: {
-            body_email_response: { type: "string", description: "The email reply text" },
-          },
-          required: ["body_email_response"],
-        },
-      }],
-      tool_choice: { type: "tool", name: "generate_draft" },
-    });
+print("Updating Draft Generation prompt...")
+update_template("bbf99919-68f8-4217-83a6-10afea020fe9", DRAFT_SYSTEM, DRAFT_USER)
 
-    const draftText = (result.body_email_response as string) || "";
+print("Updating Regeneration prompt...")
+update_template("916f6095-f2d9-470a-ac29-552fff478b6b", REGEN_SYSTEM, REGEN_USER)
 
-    // Convert text to simple HTML
-    const draftHtml = `<p>${draftText.replace(/\n\n/g, "</p><p>").replace(/\n/g, "<br>")}</p>`;
-
-    // Save draft
-    await supabase.from("draft_versions").insert({
-      reply_id,
-      version_number: 1,
-      draft_text: draftText,
-      draft_html: draftHtml,
-      created_by: "ai",
-    });
-
-    // Auto-send is disabled — all drafts go to manual review
-    {
-      await supabase.from("inbound_replies").update({ status: "awaiting_review" }).eq("id", reply_id);
-    }
-
-    await supabase.from("audit_logs").insert({
-      reply_id,
-      event_type: "draft_generated",
-      event_payload: { version: 1, auto_send: shouldAutoSend, model: "claude-sonnet-4-20250514" },
-    });
-
-    return new Response(JSON.stringify({ success: true, auto_send: shouldAutoSend }), {
-      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  } catch (err) {
-    console.error("Generate draft error:", err);
-    return new Response(JSON.stringify({ error: String(err) }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-});
+print("\nDone! Check Settings page to verify.")
