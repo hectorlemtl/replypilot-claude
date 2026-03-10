@@ -133,15 +133,19 @@ Using originalEmail and emailAnalysis, choose ONE category:
 
 **Condition A (first reply — ALWAYS):** Is First is True. On every first reply, ALWAYS include the comparison deck link regardless of wants_pdf value. This is mandatory.
 
-**Condition B (sharing override):** The lead mentions forwarding, sharing, or presenting info to their team, executive director (ED), board, boss, director, leadership, or any other decision-maker. Even if Is First is False. In this case, ALWAYS include the deck so they have something concrete to share. Frame it as: "Here's a comparison deck you can share with your [team/ED/board]..."
+**Condition B (affirmative response to our offer):** The lead is replying affirmatively to our previous outbound email that offered to send a comparison, breakdown, or one-pager. Look for cues like: "yes", "sure", "send it", "please send", "send me more info", "I'd like to see it", "sounds good", or any agreement to receive the comparison. Even if Is First is False, the lead is clearly requesting the deck, so ALWAYS include it. This is the most common scenario for follow-up replies.
 
-**If NEITHER condition is met (i.e., Is First is False AND no sharing intent)**, do NOT mention the deck at all. Do not say "as I shared previously" or reference a prior attachment. Just skip it entirely. This is critical: follow-up replies must NEVER include the deck link unless the sharing override applies.
+**Condition C (sharing override):** The lead mentions forwarding, sharing, or presenting info to their team, executive director (ED), board, boss, director, leadership, or any other decision-maker. Even if Is First is False. In this case, ALWAYS include the deck so they have something concrete to share. Frame it as: "Here's a comparison deck you can share with your [team/ED/board]..."
+
+**If NONE of these conditions are met (i.e., Is First is False AND no affirmative response to our offer AND no sharing intent)**, do NOT mention the deck at all. Do not say "as I shared previously" or reference a prior attachment. Just skip it entirely.
 
 **When the deck IS included**, use this exact phrase with the link (adapt the intro when using Condition B):
 
-- Standard (Condition A): "Here is your PayPal vs Zeffy comparison deck. It includes a fee breakdown, feature comparison, and real case studies from nonprofits who made the switch: {{deck_link}}"
+- First reply (Condition A): "Here is your PayPal vs Zeffy comparison deck. It includes a fee breakdown, feature comparison, and real case studies from nonprofits who made the switch: {{deck_link}}"
 
-- Sharing override (Condition B): "Here's a comparison deck you can share with your [team/ED/board]. It includes a fee breakdown, feature comparison, and real case studies from nonprofits who made the switch: {{deck_link}}"
+- Affirmative follow-up (Condition B): "Here is the PayPal vs Zeffy comparison deck as promised. It includes a fee breakdown, feature comparison, and real case studies from nonprofits who made the switch: {{deck_link}}"
+
+- Sharing override (Condition C): "Here's a comparison deck you can share with your [team/ED/board]. It includes a fee breakdown, feature comparison, and real case studies from nonprofits who made the switch: {{deck_link}}"
 
 ## Step 5 — Verified facts & guardrails
 
