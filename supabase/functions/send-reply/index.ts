@@ -17,6 +17,13 @@ serve(async (req) => {
       });
     }
 
+    // Block auto-send for now — all sends require manual approval
+    if (auto_send) {
+      return new Response(JSON.stringify({ message: "Auto-send disabled, queued for review" }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -44,7 +51,6 @@ serve(async (req) => {
 
     // Get settings
     const { data: settings } = await supabase.from("app_settings").select("*").single();
-    const instantlyApiBase = settings?.instantly_api_base_url || "https://api.instantly.ai/api/v2";
     const INSTANTLY_API_KEY = Deno.env.get("INSTANTLY_API_KEY");
 
     if (!INSTANTLY_API_KEY) {
@@ -65,16 +71,18 @@ serve(async (req) => {
       });
     }
 
-    // Instantly API v2 payload — POST /api/v2/emails/{email_id}
-    const emailId = reply.instantly_email_id;
+    // Instantly API v2 — POST /api/v2/emails/reply
+    // Docs: https://developer.instantly.ai/api/v2/email/replytoemail
     const sendPayload: Record<string, unknown> = {
-      reply_body: draft.draft_html || draft.draft_text,
-      eaccount: reply.email_account,
+      reply_to_uuid: reply.instantly_email_id,
+      email_body: draft.draft_html || draft.draft_text,
+      from: reply.email_account,
+      to: reply.lead_email,
     };
 
     // Include CC recipients if the inbound reply had CC'd people
     if (reply.cc_emails && reply.cc_emails.length > 0) {
-      sendPayload.cc = reply.cc_emails;
+      sendPayload.cc_address_email_list = reply.cc_emails;
     }
 
     let sendResponse;
@@ -82,7 +90,7 @@ serve(async (req) => {
     let success = false;
 
     try {
-      sendResponse = await fetch(`${instantlyApiBase}/emails/${emailId}`, {
+      sendResponse = await fetch("https://api.instantly.ai/api/v2/emails/reply", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -111,7 +119,7 @@ serve(async (req) => {
     // Update reply status
     await supabase.from("inbound_replies").update({
       status: success ? "sent" : "failed",
-      processing_error: success ? null : `Send failed: ${sendResponse?.status || "unknown"}`,
+      processing_error: success ? null : `Send failed: ${sendResponse?.status || "unknown"} - ${JSON.stringify(responseBody)}`,
     }).eq("id", reply_id);
 
     // Audit log
@@ -120,8 +128,9 @@ serve(async (req) => {
       event_type: success ? "reply_sent" : "send_failed",
       event_payload: {
         draft_version: draft.version_number,
-        auto_send: auto_send || false,
+        auto_send: false,
         status_code: sendResponse?.status,
+        response: responseBody,
       },
     });
 

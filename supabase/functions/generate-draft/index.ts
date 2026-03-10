@@ -308,34 +308,8 @@ serve(async (req) => {
       created_by: "ai",
     });
 
-    // Check for auto-send
-    const shouldAutoSend =
-      reply.is_first_reply &&
-      reply.simple_affirmative &&
-      settings?.auto_send_simple_affirmative;
-
-    if (shouldAutoSend) {
-      await supabase.from("inbound_replies").update({ status: "drafted" }).eq("id", reply_id);
-
-      // Get the draft we just inserted
-      const { data: draft } = await supabase
-        .from("draft_versions")
-        .select("id")
-        .eq("reply_id", reply_id)
-        .eq("version_number", 1)
-        .single();
-
-      // Trigger auto-send
-      const sendUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-reply`;
-      fetch(sendUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-        },
-        body: JSON.stringify({ reply_id, draft_version_id: draft?.id, auto_send: true }),
-      }).catch(console.error);
-    } else {
+    // Auto-send is disabled — all drafts go to manual review
+    {
       await supabase.from("inbound_replies").update({ status: "awaiting_review" }).eq("id", reply_id);
     }
 
