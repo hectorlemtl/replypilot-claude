@@ -269,7 +269,7 @@ serve(async (req) => {
       .replace("{{temperature}}", reply.temperature || "")
       .replace("{{wants_pdf}}", String(reply.wants_pdf || false))
       .replace("{{is_first_reply}}", String(reply.is_first_reply || false))
-      .replace("{{lead_name}}", reply.lead_name || reply.lead_email || "")
+      .replace("{{lead_name}}", reply.sender_name || reply.lead_name || reply.lead_email || "")
       .replace(/\{\{deck_link\}\}/g, campaignDeck)
       .replace("{{calendar_link}}", campaignCalendar);
 

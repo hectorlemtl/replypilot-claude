@@ -219,6 +219,8 @@ export type Database = {
           reply_html: string | null
           reply_subject: string | null
           reply_text: string | null
+          sender_email: string | null
+          sender_name: string | null
           sentiment: string | null
           simple_affirmative: boolean | null
           status: Database["public"]["Enums"]["reply_status"]
@@ -243,6 +245,8 @@ export type Database = {
           reply_html?: string | null
           reply_subject?: string | null
           reply_text?: string | null
+          sender_email?: string | null
+          sender_name?: string | null
           sentiment?: string | null
           simple_affirmative?: boolean | null
           status?: Database["public"]["Enums"]["reply_status"]
@@ -267,6 +271,8 @@ export type Database = {
           reply_html?: string | null
           reply_subject?: string | null
           reply_text?: string | null
+          sender_email?: string | null
+          sender_name?: string | null
           sentiment?: string | null
           simple_affirmative?: boolean | null
           status?: Database["public"]["Enums"]["reply_status"]

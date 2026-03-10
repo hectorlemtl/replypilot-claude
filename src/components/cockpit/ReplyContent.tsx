@@ -60,7 +60,13 @@ export function ReplyContent({ reply, isLoading }: ReplyContentProps) {
 
         {/* Email header — From / To / CC */}
         <div className="text-[11px] text-muted-foreground space-y-0.5">
-          <div><span className="font-medium text-foreground/70 w-8 inline-block">From:</span> {reply.lead_name || reply.lead_email} &lt;{reply.lead_email}&gt;</div>
+          <div>
+            <span className="font-medium text-foreground/70 w-8 inline-block">From:</span>{" "}
+            {reply.sender_name || reply.lead_name || reply.lead_email} &lt;{reply.sender_email || reply.lead_email}&gt;
+            {reply.sender_email && reply.sender_email !== reply.lead_email && (
+              <span className="ml-1.5 text-[10px] text-warning-foreground bg-warning/15 px-1 rounded">on behalf of {reply.lead_name}</span>
+            )}
+          </div>
           {reply.email_account && (
             <div><span className="font-medium text-foreground/70 w-8 inline-block">To:</span> {reply.email_account}</div>
           )}

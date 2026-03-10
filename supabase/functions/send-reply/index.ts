@@ -75,8 +75,8 @@ serve(async (req) => {
     const receivedDate = reply.received_at
       ? new Date(reply.received_at).toLocaleString("en-US", { weekday: "short", year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
       : "";
-    const senderName = reply.lead_name || reply.lead_email;
-    const senderEmail = reply.lead_email;
+    const senderName = reply.sender_name || reply.lead_name || reply.lead_email;
+    const senderEmail = reply.sender_email || reply.lead_email;
 
     // HTML version: draft + quoted original
     let fullHtml = draft.draft_html || `<p>${(draft.draft_text || "").replace(/\n\n/g, "</p><p>").replace(/\n/g, "<br>")}</p>`;
