@@ -9,8 +9,8 @@ const corsHeaders = {
 const MAX_PAGES_PER_RUN = 5;
 const PAGE_SIZE = 100;
 
-// Exclude emails sent FROM these addresses (internal senders)
-const EXCLUDED_SENDERS = [
+// Exclude emails received by these mailbox accounts
+const EXCLUDED_ACCOUNTS = [
   "julia@zeffy.com",
   "camille@zeffy.com",
   "hubert@zeffy.com",
@@ -111,9 +111,10 @@ serve(async (req) => {
           continue;
         }
 
-        // Skip excluded senders
-        const rawSender = (email.from_address_email || "").toLowerCase().trim();
-        if (EXCLUDED_SENDERS.includes(rawSender)) {
+        // Skip emails received by excluded mailbox accounts
+        const account = (email.eaccount || "").toLowerCase().trim();
+        const recipient = (email.to_address_email_list || "").toLowerCase().trim();
+        if (EXCLUDED_ACCOUNTS.some(ex => account.includes(ex) || recipient.includes(ex))) {
           continue;
         }
 
