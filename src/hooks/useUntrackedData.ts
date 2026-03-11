@@ -326,6 +326,26 @@ export function useUntrackedData() {
     },
   });
 
+  // Send reply to untracked email
+  const sendReplyMutation = useMutation({
+    mutationFn: async (replyText: string) => {
+      if (!replyText.trim()) throw new Error("Reply text is empty");
+      const { data, error } = await supabase.functions.invoke("send-untracked-reply", {
+        body: { untracked_id: selectedId, reply_text: replyText.trim() },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast({ title: "Reply sent" });
+      invalidateAll();
+      setTimeout(selectNext, 300);
+    },
+    onError: (err) => {
+      toast({ title: "Send failed", description: String(err), variant: "destructive" });
+    },
+  });
+
   // Batch classify unclassified emails
   const classifyMutation = useMutation({
     mutationFn: async () => {
@@ -385,5 +405,6 @@ export function useUntrackedData() {
     saveNotesMutation,
     syncNowMutation,
     classifyMutation,
+    sendReplyMutation,
   };
 }
