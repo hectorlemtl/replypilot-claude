@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, RefreshCw, AlertTriangle, Pencil, RotateCcw, CheckCircle } from "lucide-react";
+import { Send, RefreshCw, AlertTriangle, Pencil, RotateCcw, CheckCircle, Archive, ArchiveRestore } from "lucide-react";
 import { FeedbackChips } from "./FeedbackChips";
 import { DiffView } from "./DiffView";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -17,10 +17,14 @@ interface DraftPanelProps {
   onSaveDraft: (text: string) => void;
   onRetrySend: () => void;
   onMarkResponded: () => void;
+  onArchive: () => void;
+  onRestore: () => void;
   isApproving: boolean;
   isRegenerating: boolean;
   isMarkingManual: boolean;
   isMarkingResponded: boolean;
+  isArchiving: boolean;
+  isRestoring: boolean;
   isSaving: boolean;
   isRetrying: boolean;
   feedbackRef?: React.RefObject<HTMLTextAreaElement>;
@@ -37,10 +41,14 @@ export function DraftPanel({
   onSaveDraft,
   onRetrySend,
   onMarkResponded,
+  onArchive,
+  onRestore,
   isApproving,
   isRegenerating,
   isMarkingManual,
   isMarkingResponded,
+  isArchiving,
+  isRestoring,
   isSaving,
   isRetrying,
   feedbackRef,
@@ -303,7 +311,7 @@ export function DraftPanel({
         )}
 
         {/* Mark as responded manually — for when Julia replied outside the system */}
-        {reply.status !== "sent" && (
+        {reply.status !== "sent" && !reply.archived_at && (
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -317,6 +325,34 @@ export function DraftPanel({
               </Button>
             </TooltipTrigger>
             <TooltipContent>Mark this email as already responded to (e.g., replied directly in Gmail)</TooltipContent>
+          </Tooltip>
+        )}
+
+        {/* Archive / Restore */}
+        {reply.archived_at ? (
+          <Button
+            variant="outline"
+            className="w-full h-8 text-xs text-muted-foreground"
+            onClick={onRestore}
+            disabled={isRestoring}
+          >
+            <ArchiveRestore className="w-3.5 h-3.5 mr-1.5" />
+            {isRestoring ? "Restoring..." : "Restore from archive"}
+          </Button>
+        ) : (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                className="w-full h-8 text-xs text-muted-foreground/60 hover:text-muted-foreground"
+                onClick={onArchive}
+                disabled={isArchiving}
+              >
+                <Archive className="w-3.5 h-3.5 mr-1.5" />
+                {isArchiving ? "Archiving..." : "Archive"}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Archive this thread</TooltipContent>
           </Tooltip>
         )}
       </div>

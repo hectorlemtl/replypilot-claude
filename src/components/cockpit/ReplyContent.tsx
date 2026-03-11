@@ -1,6 +1,6 @@
 import { TemperatureBadge } from "@/components/TemperatureBadge";
 import { StatusBadge } from "@/components/StatusBadge";
-import { ExternalLink, Check, X, FileText, Clock, Code } from "lucide-react";
+import { ExternalLink, Check, X, FileText, Clock, Code, MessageCircle } from "lucide-react";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -96,6 +96,12 @@ export function ReplyContent({ reply, isLoading }: ReplyContentProps) {
             <span className="flex items-center gap-1 text-success font-medium">
               <Check className="w-3 h-3" />
               Simple yes
+            </span>
+          )}
+          {reply.first_reply_received_at && (
+            <span className="flex items-center gap-1 text-amber-600 font-medium">
+              <MessageCircle className="w-3 h-3" />
+              1st reply
             </span>
           )}
         </div>

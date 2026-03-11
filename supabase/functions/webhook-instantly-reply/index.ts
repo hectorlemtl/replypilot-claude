@@ -95,6 +95,23 @@ serve(async (req) => {
     // Fetch actual sender and CC from Instantly API
     const { senderEmail, senderName, ccEmails } = await fetchEmailDetails(email_id);
 
+    // Determine if this is the first reply ever from this lead
+    const isFirstReply = is_first === true || is_first === "true";
+    let firstReplyReceivedAt: string | null = null;
+    if (isFirstReply) {
+      // Check if we already have a reply from this lead (idempotent)
+      const { data: existingLead } = await supabase
+        .from("inbound_replies")
+        .select("id")
+        .eq("lead_email", lead_email)
+        .not("first_reply_received_at", "is", null)
+        .limit(1)
+        .maybeSingle();
+      if (!existingLead) {
+        firstReplyReceivedAt = new Date().toISOString();
+      }
+    }
+
     const { data: reply, error: insertError } = await supabase.from("inbound_replies").insert({
       instantly_email_id: email_id,
       instantly_unibox_url: unibox_url || null,
@@ -105,7 +122,8 @@ serve(async (req) => {
       reply_text: reply_text || null,
       reply_html: reply_html || null,
       raw_payload: payload,
-      is_first_reply: is_first === true || is_first === "true",
+      is_first_reply: isFirstReply,
+      first_reply_received_at: firstReplyReceivedAt,
       cc_emails: ccEmails.length > 0 ? ccEmails : null,
       sender_email: senderEmail,
       sender_name: senderName,

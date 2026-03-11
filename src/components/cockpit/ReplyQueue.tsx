@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { TemperatureBadge } from "@/components/TemperatureBadge";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Search, Inbox } from "lucide-react";
+import { Search, Inbox, MessageCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { formatDistanceToNow } from "date-fns";
 import { forwardRef } from "react";
@@ -89,6 +89,12 @@ export const ReplyQueue = forwardRef<HTMLInputElement, ReplyQueueProps>(
                   </p>
                   <div className="flex items-center gap-2">
                     <StatusBadge status={reply.status} />
+                    {reply.first_reply_received_at && (
+                      <span className="flex items-center gap-0.5 text-[10px] text-amber-600 font-medium">
+                        <MessageCircle className="w-2.5 h-2.5" />
+                        1st reply
+                      </span>
+                    )}
                     {waitTime && (
                       <span className={cn(
                         "text-[10px]",

@@ -113,10 +113,14 @@ export function CockpitLayout() {
             onSaveDraft={(text) => data.saveDraftMutation.mutate(text)}
             onRetrySend={() => data.retrySendMutation.mutate()}
             onMarkResponded={() => data.markRespondedMutation.mutate()}
+            onArchive={() => data.archiveMutation.mutate()}
+            onRestore={() => data.restoreMutation.mutate()}
             isApproving={data.approveMutation.isPending}
             isRegenerating={data.regenerateMutation.isPending}
             isMarkingManual={data.markManualMutation.isPending}
             isMarkingResponded={data.markRespondedMutation.isPending}
+            isArchiving={data.archiveMutation.isPending}
+            isRestoring={data.restoreMutation.isPending}
             isSaving={data.saveDraftMutation.isPending}
             isRetrying={data.retrySendMutation.isPending}
             feedbackRef={feedbackRef}

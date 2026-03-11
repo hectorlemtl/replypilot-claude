@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useCallback, useState, useMemo } from "react";
 import { startOfDay, subDays } from "date-fns";
 
-export type QueueFilter = "hot_review" | "simple_review" | "failed" | "manual_review" | "all" | "sent" | "skipped" | "waiting_for_reply";
+export type QueueFilter = "hot_review" | "simple_review" | "failed" | "manual_review" | "all" | "sent" | "skipped" | "waiting_for_reply" | "archived";
 export type DatePreset = "all" | "today" | "yesterday" | "last7" | "last30" | "custom";
 export type SortBy = "newest" | "oldest" | "hot_first" | "failed_first" | "awaiting_first";
 
@@ -69,31 +69,33 @@ export function filterByDate<T extends { received_at: string | null }>(
   });
 }
 
-export function sortReplies<T extends { received_at: string | null; temperature?: string | null; status: string }>(
+export function sortReplies<T extends { received_at: string | null; updated_at?: string | null; temperature?: string | null; status: string }>(
   items: T[],
   sortBy: SortBy,
 ): T[] {
   const sorted = [...items];
+  // Use updated_at (latest activity) as primary sort timestamp, fall back to received_at
+  const activityTime = (r: T) => new Date((r as any).updated_at || r.received_at || 0).getTime();
   sorted.sort((a, b) => {
     switch (sortBy) {
       case "newest":
-        return new Date(b.received_at || 0).getTime() - new Date(a.received_at || 0).getTime();
+        return activityTime(b) - activityTime(a);
       case "oldest":
-        return new Date(a.received_at || 0).getTime() - new Date(b.received_at || 0).getTime();
+        return activityTime(a) - activityTime(b);
       case "hot_first": {
         const pa = PRIORITY_ORDER[a.temperature || ""] ?? 99;
         const pb = PRIORITY_ORDER[b.temperature || ""] ?? 99;
-        return pa !== pb ? pa - pb : new Date(b.received_at || 0).getTime() - new Date(a.received_at || 0).getTime();
+        return pa !== pb ? pa - pb : activityTime(b) - activityTime(a);
       }
       case "failed_first": {
         const fa = a.status === "failed" ? 0 : 1;
         const fb = b.status === "failed" ? 0 : 1;
-        return fa !== fb ? fa - fb : new Date(b.received_at || 0).getTime() - new Date(a.received_at || 0).getTime();
+        return fa !== fb ? fa - fb : activityTime(b) - activityTime(a);
       }
       case "awaiting_first": {
         const sa = STATUS_PRIORITY[a.status] ?? 99;
         const sb = STATUS_PRIORITY[b.status] ?? 99;
-        return sa !== sb ? sa - sb : new Date(b.received_at || 0).getTime() - new Date(a.received_at || 0).getTime();
+        return sa !== sb ? sa - sb : activityTime(b) - activityTime(a);
       }
       default:
         return 0;
@@ -111,15 +113,15 @@ export function useCockpitData() {
   const [datePreset, setDatePreset] = useState<DatePreset>("all");
   const [customDateFrom, setCustomDateFrom] = useState("");
   const [customDateTo, setCustomDateTo] = useState("");
-  const [sortBy, setSortBy] = useState<SortBy>("oldest");
+  const [sortBy, setSortBy] = useState<SortBy>("newest");
 
-  // All replies for counting
+  // All replies for counting (include archived_at for filtering)
   const { data: allReplies } = useQuery({
     queryKey: ["cockpit_all_replies"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("inbound_replies")
-        .select("id, status, temperature, received_at");
+        .select("id, status, temperature, received_at, archived_at");
       if (error) throw error;
       return data;
     },
@@ -127,16 +129,19 @@ export function useCockpitData() {
   });
 
   const counts = useMemo(() => {
-    if (!allReplies) return { hot_review: 0, simple_review: 0, failed: 0, manual_review: 0, all: 0, sent: 0, skipped: 0, waiting_for_reply: 0 };
+    if (!allReplies) return { hot_review: 0, simple_review: 0, failed: 0, manual_review: 0, all: 0, sent: 0, skipped: 0, waiting_for_reply: 0, archived: 0 };
+    const active = allReplies.filter(r => !r.archived_at);
+    const archived = allReplies.filter(r => !!r.archived_at);
     return {
-      hot_review: allReplies.filter(r => (r.temperature === "hot" || r.temperature === "warm") && ["awaiting_review", "regenerated"].includes(r.status)).length,
-      simple_review: allReplies.filter(r => r.temperature === "simple" && ["awaiting_review", "regenerated"].includes(r.status)).length,
-      failed: allReplies.filter(r => r.status === "failed").length,
-      manual_review: allReplies.filter(r => r.status === "manual_review").length,
-      all: allReplies.length,
-      sent: allReplies.filter(r => r.status === "sent").length,
-      skipped: allReplies.filter(r => r.status === "skipped").length,
-      waiting_for_reply: allReplies.filter(r => r.status === "sent").length,
+      hot_review: active.filter(r => (r.temperature === "hot" || r.temperature === "warm") && ["awaiting_review", "regenerated"].includes(r.status)).length,
+      simple_review: active.filter(r => r.temperature === "simple" && ["awaiting_review", "regenerated"].includes(r.status)).length,
+      failed: active.filter(r => r.status === "failed").length,
+      manual_review: active.filter(r => r.status === "manual_review").length,
+      all: active.length,
+      sent: active.filter(r => r.status === "sent").length,
+      skipped: active.filter(r => r.status === "skipped").length,
+      waiting_for_reply: active.filter(r => r.status === "sent").length,
+      archived: archived.length,
     };
   }, [allReplies]);
 
@@ -146,8 +151,15 @@ export function useCockpitData() {
     queryFn: async () => {
       let query = supabase
         .from("inbound_replies")
-        .select("id, lead_email, lead_name, temperature, status, reply_subject, reply_text, received_at, wants_pdf, simple_affirmative")
-        .order("received_at", { ascending: true });
+        .select("id, lead_email, lead_name, temperature, status, reply_subject, reply_text, received_at, updated_at, wants_pdf, simple_affirmative, first_reply_received_at, archived_at")
+        .order("updated_at", { ascending: false });
+
+      // Archive filter: show only archived, or exclude archived for everything else
+      if (activeFilter === "archived") {
+        query = query.not("archived_at", "is", null);
+      } else {
+        query = query.is("archived_at", null);
+      }
 
       switch (activeFilter) {
         case "hot_review":
@@ -163,16 +175,18 @@ export function useCockpitData() {
           query = query.eq("status", "manual_review" as any);
           break;
         case "sent":
-          query = query.eq("status", "sent" as any).order("received_at", { ascending: false });
+          query = query.eq("status", "sent" as any);
           break;
         case "waiting_for_reply":
-          query = query.eq("status", "sent" as any).order("received_at", { ascending: false });
+          query = query.eq("status", "sent" as any);
           break;
         case "skipped":
-          query = query.in("status", ["skipped"] as any).order("received_at", { ascending: false });
+          query = query.in("status", ["skipped"] as any);
+          break;
+        case "archived":
+          // Already filtered above, no additional status filter
           break;
         case "all":
-          query = query.order("received_at", { ascending: false });
           break;
       }
 
@@ -248,10 +262,10 @@ export function useCockpitData() {
     setDatePreset("all");
     setCustomDateFrom("");
     setCustomDateTo("");
-    setSortBy("oldest");
+    setSortBy("newest");
   }, []);
 
-  const hasActiveFilters = datePreset !== "all" || sortBy !== "oldest";
+  const hasActiveFilters = datePreset !== "all" || sortBy !== "newest";
 
   const invalidateAll = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["cockpit_all_replies"] });
@@ -360,6 +374,40 @@ export function useCockpitData() {
     },
   });
 
+  // Archive
+  const archiveMutation = useMutation({
+    mutationFn: async () => {
+      await supabase.from("inbound_replies").update({ archived_at: new Date().toISOString() }).eq("id", selectedId!);
+      await supabase.from("audit_logs").insert({
+        reply_id: selectedId!,
+        event_type: "reply_archived",
+        event_payload: { archived_by: "reviewer" },
+      });
+    },
+    onSuccess: () => {
+      toast({ title: "Archived" });
+      invalidateAll();
+      setTimeout(selectNext, 300);
+    },
+  });
+
+  // Restore from archive
+  const restoreMutation = useMutation({
+    mutationFn: async () => {
+      await supabase.from("inbound_replies").update({ archived_at: null }).eq("id", selectedId!);
+      await supabase.from("audit_logs").insert({
+        reply_id: selectedId!,
+        event_type: "reply_restored",
+        event_payload: { restored_by: "reviewer" },
+      });
+    },
+    onSuccess: () => {
+      toast({ title: "Restored from archive" });
+      invalidateAll();
+      setTimeout(selectNext, 300);
+    },
+  });
+
   // Save edited draft
   const saveDraftMutation = useMutation({
     mutationFn: async (text: string) => {
@@ -436,6 +484,8 @@ export function useCockpitData() {
     regenerateMutation,
     markManualMutation,
     markRespondedMutation,
+    archiveMutation,
+    restoreMutation,
     saveDraftMutation,
     retrySendMutation,
   };

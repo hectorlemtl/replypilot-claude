@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { QueueFilter } from "@/hooks/useCockpitData";
-import { Flame, Zap, AlertTriangle, Eye, Keyboard, Clock } from "lucide-react";
+import { Flame, Zap, AlertTriangle, Eye, Keyboard, Clock, Archive } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { SHORTCUTS } from "@/hooks/useKeyboardShortcuts";
 import { useState } from "react";
@@ -19,6 +19,7 @@ const FILTERS: { key: QueueFilter; label: string; icon: typeof Flame; urgent?: b
   { key: "waiting_for_reply", label: "Waiting", icon: Clock },
   { key: "all", label: "All", icon: Eye },
   { key: "sent", label: "Sent", icon: Eye },
+  { key: "archived", label: "Archived", icon: Archive },
 ];
 
 export function WorkloadBar({ counts, activeFilter, onFilterChange }: WorkloadBarProps) {
@@ -48,6 +49,7 @@ export function WorkloadBar({ counts, activeFilter, onFilterChange }: WorkloadBa
             {key === "simple_review" && <Zap className="w-3 h-3" />}
             {key === "failed" && <AlertTriangle className="w-3 h-3" />}
             {key === "waiting_for_reply" && <Clock className="w-3 h-3" />}
+            {key === "archived" && <Archive className="w-3 h-3" />}
             {label}
             {count > 0 && (
               <span className={cn(
