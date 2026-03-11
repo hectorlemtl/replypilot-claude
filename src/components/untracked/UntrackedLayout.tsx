@@ -85,6 +85,7 @@ export function UntrackedLayout() {
             onArchive={() => data.archiveMutation.mutate()}
             onRestore={() => data.restoreMutation.mutate()}
             onSaveNotes={(notes) => data.saveNotesMutation.mutate(notes)}
+            onSendReply={(text) => data.sendReplyMutation.mutate(text)}
             isMarkingSpam={data.markSpamMutation.isPending}
             isMarkingIgnored={data.markIgnoredMutation.isPending}
             isMarkingInterested={data.markInterestedMutation.isPending}
@@ -93,6 +94,7 @@ export function UntrackedLayout() {
             isArchiving={data.archiveMutation.isPending}
             isRestoring={data.restoreMutation.isPending}
             isSavingNotes={data.saveNotesMutation.isPending}
+            isSendingReply={data.sendReplyMutation.isPending}
           />
         </ResizablePanel>
       </ResizablePanelGroup>

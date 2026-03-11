@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { CategoryBadge } from "./CategoryBadge";
-import { Ban, X, Star, HelpCircle, Archive, RotateCcw, CheckCircle, User, ExternalLink } from "lucide-react";
+import { Ban, X, Star, HelpCircle, Archive, RotateCcw, CheckCircle, User, Send } from "lucide-react";
 import { useState } from "react";
 
 interface TriagePanelProps {
@@ -15,6 +15,7 @@ interface TriagePanelProps {
   onArchive: () => void;
   onRestore: () => void;
   onSaveNotes: (notes: string) => void;
+  onSendReply: (text: string) => void;
   isMarkingSpam: boolean;
   isMarkingIgnored: boolean;
   isMarkingInterested: boolean;
@@ -23,6 +24,7 @@ interface TriagePanelProps {
   isArchiving: boolean;
   isRestoring: boolean;
   isSavingNotes: boolean;
+  isSendingReply: boolean;
 }
 
 export function TriagePanel({
@@ -44,8 +46,11 @@ export function TriagePanel({
   isArchiving,
   isRestoring,
   isSavingNotes,
+  isSendingReply,
 }: TriagePanelProps) {
   const [notes, setNotes] = useState("");
+  const [replyText, setReplyText] = useState("");
+  const [showReply, setShowReply] = useState(false);
 
   // Reset notes when email changes
   const emailId = email?.id;
@@ -53,6 +58,8 @@ export function TriagePanel({
   if (emailId !== lastEmailId) {
     setLastEmailId(emailId);
     setNotes(email?.review_notes || "");
+    setReplyText("");
+    setShowReply(false);
   }
 
   if (!email) {
@@ -152,43 +159,71 @@ export function TriagePanel({
         <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Quick Actions</h3>
 
         {isPending && (
-          <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                onClick={onMarkInterested}
+                disabled={isMarkingInterested}
+              >
+                <Star className="w-3 h-3 mr-1" /> Interested
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs text-amber-600 border-amber-200 hover:bg-amber-50"
+                onClick={onMarkNeedsReply}
+                disabled={isMarkingNeedsReply}
+              >
+                <HelpCircle className="w-3 h-3 mr-1" /> Needs Reply
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs text-red-600 border-red-200 hover:bg-red-50"
+                onClick={onMarkSpam}
+                disabled={isMarkingSpam}
+              >
+                <Ban className="w-3 h-3 mr-1" /> Spam
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs"
+                onClick={onMarkIgnored}
+                disabled={isMarkingIgnored}
+              >
+                <X className="w-3 h-3 mr-1" /> Not Relevant
+              </Button>
+            </div>
             <Button
               size="sm"
-              variant="outline"
-              className="h-8 text-xs text-emerald-600 border-emerald-200 hover:bg-emerald-50"
-              onClick={onMarkInterested}
-              disabled={isMarkingInterested}
+              className="h-8 text-xs w-full bg-primary"
+              onClick={() => setShowReply(!showReply)}
             >
-              <Star className="w-3 h-3 mr-1" /> Interested
+              <Send className="w-3 h-3 mr-1" /> {showReply ? "Hide Reply" : "Reply"}
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 text-xs text-amber-600 border-amber-200 hover:bg-amber-50"
-              onClick={onMarkNeedsReply}
-              disabled={isMarkingNeedsReply}
-            >
-              <HelpCircle className="w-3 h-3 mr-1" /> Needs Reply
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 text-xs text-red-600 border-red-200 hover:bg-red-50"
-              onClick={onMarkSpam}
-              disabled={isMarkingSpam}
-            >
-              <Ban className="w-3 h-3 mr-1" /> Spam
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 text-xs"
-              onClick={onMarkIgnored}
-              disabled={isMarkingIgnored}
-            >
-              <X className="w-3 h-3 mr-1" /> Not Relevant
-            </Button>
+
+            {showReply && (
+              <div className="space-y-2 mt-2">
+                <Textarea
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  placeholder="Type your reply..."
+                  className="text-xs resize-none min-h-[100px]"
+                />
+                <Button
+                  size="sm"
+                  className="h-8 text-xs w-full"
+                  onClick={() => onSendReply(replyText)}
+                  disabled={isSendingReply || !replyText.trim()}
+                >
+                  <Send className="w-3 h-3 mr-1" /> {isSendingReply ? "Sending..." : "Send Reply"}
+                </Button>
+              </div>
+            )}
           </div>
         )}
 
