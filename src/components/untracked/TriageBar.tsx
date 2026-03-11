@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { UntrackedFilter } from "@/hooks/useUntrackedData";
-import { Star, HelpCircle, Inbox, Archive, RefreshCw } from "lucide-react";
+import { Star, HelpCircle, Inbox, Archive, RefreshCw, Sparkles } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 interface TriageBarProps {
@@ -10,6 +10,9 @@ interface TriageBarProps {
   syncLastAt: string | null;
   onSyncNow: () => void;
   isSyncing: boolean;
+  onClassify: () => void;
+  isClassifying: boolean;
+  pendingCount: number;
 }
 
 const FILTERS: { key: UntrackedFilter; label: string; icon: typeof Star; urgent?: boolean }[] = [
@@ -20,7 +23,7 @@ const FILTERS: { key: UntrackedFilter; label: string; icon: typeof Star; urgent?
   { key: "archived", label: "Archived", icon: Archive },
 ];
 
-export function TriageBar({ counts, activeFilter, onFilterChange, syncLastAt, onSyncNow, isSyncing }: TriageBarProps) {
+export function TriageBar({ counts, activeFilter, onFilterChange, syncLastAt, onSyncNow, isSyncing, onClassify, isClassifying, pendingCount }: TriageBarProps) {
   return (
     <div className="h-11 border-b border-border bg-card flex items-center px-3 gap-1 shrink-0">
       {FILTERS.map(({ key, label, icon: Icon, urgent }) => {
@@ -66,6 +69,14 @@ export function TriageBar({ counts, activeFilter, onFilterChange, syncLastAt, on
             Synced {formatDistanceToNow(new Date(syncLastAt), { addSuffix: true })}
           </span>
         )}
+        <button
+          onClick={onClassify}
+          disabled={isClassifying || pendingCount === 0}
+          className="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors disabled:opacity-50"
+        >
+          <Sparkles className={cn("w-3 h-3", isClassifying && "animate-pulse")} />
+          Classify
+        </button>
         <button
           onClick={onSyncNow}
           disabled={isSyncing}

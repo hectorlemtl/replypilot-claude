@@ -27,6 +27,9 @@ export function UntrackedLayout() {
         syncLastAt={data.syncStatus?.untracked_sync_last_at || null}
         onSyncNow={() => data.syncNowMutation.mutate()}
         isSyncing={data.syncNowMutation.isPending}
+        onClassify={() => data.classifyMutation.mutate()}
+        isClassifying={data.classifyMutation.isPending}
+        pendingCount={data.counts.pending}
       />
 
       <ResizablePanelGroup direction="horizontal" className="flex-1">

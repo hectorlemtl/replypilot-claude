@@ -326,6 +326,25 @@ export function useUntrackedData() {
     },
   });
 
+  // Batch classify unclassified emails
+  const classifyMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("batch-classify-untracked", { body: {} });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      const msg = data?.classified
+        ? `Classified ${data.classified} emails (${data.ai_classified} AI, ${data.rule_matched} rules)`
+        : "Nothing to classify";
+      toast({ title: msg });
+      invalidateAll();
+    },
+    onError: (err) => {
+      toast({ title: "Classification failed", description: String(err), variant: "destructive" });
+    },
+  });
+
   return {
     // State
     selectedId,
@@ -365,5 +384,6 @@ export function useUntrackedData() {
     restoreMutation,
     saveNotesMutation,
     syncNowMutation,
+    classifyMutation,
   };
 }
