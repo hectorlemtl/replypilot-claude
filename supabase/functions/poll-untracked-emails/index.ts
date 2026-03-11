@@ -9,6 +9,13 @@ const corsHeaders = {
 const MAX_PAGES_PER_RUN = 5;
 const PAGE_SIZE = 100;
 
+// Exclude emails sent FROM these addresses (internal senders)
+const EXCLUDED_SENDERS = [
+  "julia@zeffy.com",
+  "camille@zeffy.com",
+  "hubert@zeffy.com",
+];
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -101,6 +108,12 @@ serve(async (req) => {
 
         if (existingTracked) {
           skippedTracked++;
+          continue;
+        }
+
+        // Skip excluded senders
+        const rawSender = (email.from_address_email || "").toLowerCase().trim();
+        if (EXCLUDED_SENDERS.includes(rawSender)) {
           continue;
         }
 
