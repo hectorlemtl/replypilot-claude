@@ -191,18 +191,23 @@ Using originalEmail and emailAnalysis, choose ONE category:
 
 When the lead asks about a specific feature, how something works, pricing details, or migration process, include the most relevant Knowledge Base link from this list. This applies across ALL response categories where the lead has a specific question, not just feature/migration questions:
 
-- Getting started / migration: https://www.zeffy.com/help/getting-started
-- Donation forms: https://www.zeffy.com/help/donation-forms
-- Events & ticketing: https://www.zeffy.com/help/events
-- Memberships: https://www.zeffy.com/help/memberships
-- Peer-to-peer fundraising: https://www.zeffy.com/help/peer-to-peer
-- Tax receipts: https://www.zeffy.com/help/tax-receipts
-- Donor management / CRM: https://www.zeffy.com/help/donor-management
-- Online store: https://www.zeffy.com/help/online-store
-- Raffles & 50/50: https://www.zeffy.com/help/raffles
-- Auctions: https://www.zeffy.com/help/auctions
-- Integrations: https://www.zeffy.com/help/integrations
-- Payouts & banking: https://www.zeffy.com/help/payouts
+- Getting started / migration: https://support.zeffy.com/migrating-to-zeffy-a-step-by-step-guide
+- How Zeffy is free / business model: https://support.zeffy.com/how-is-zeffy-free
+- Donation forms: https://support.zeffy.com/how-do-i-set-up-a-donation-form
+- Events & ticketing: https://support.zeffy.com/how-can-i-set-up-an-event-on-zeffy
+- Memberships: https://support.zeffy.com/automatic-membership-renewals
+- Peer-to-peer fundraising: https://support.zeffy.com/how-do-i-set-up-an-open-registration-peer-to-peer-campaign
+- Tax receipts: https://support.zeffy.com/how-to-set-up-automatic-tax-receipts-1
+- Donor management / CRM: https://support.zeffy.com/what-can-i-do-on-my-donors-profile-page
+- Online store: https://support.zeffy.com/how-do-i-set-up-a-store-on-zeffy
+- Raffles & 50/50: https://support.zeffy.com/how-do-i-set-up-a-raffle-on-zeffy
+- Auctions: https://support.zeffy.com/creating-and-configuring-an-auction-form
+- Integrations: https://support.zeffy.com/do-you-integrate-with-other-tools
+- Payouts & banking: https://support.zeffy.com/how-often/-when-do-i-get-my-payout
+- Payment methods: https://support.zeffy.com/zeffy-payment-methods
+- Embedding forms: https://support.zeffy.com/how-do-i-add-my-form-to-my-website
+
+{{kb_articles}}
 
 Frame the link naturally, e.g.: "You can find more details on how that works here: [link]"
 Only include ONE relevant KB link per reply. Do not list multiple links.
@@ -274,6 +279,38 @@ serve(async (req) => {
       if (campaign?.calendar_link) campaignCalendar = campaign.calendar_link;
     }
 
+    // Search KB articles for relevant context based on the lead's reply
+    let kbContext = "";
+    try {
+      const searchText = (reply.reply_text || "").slice(0, 300);
+      if (searchText.trim()) {
+        // Convert to tsquery: take meaningful words, join with |
+        const words = searchText
+          .replace(/[^a-zA-Z0-9\s]/g, " ")
+          .split(/\s+/)
+          .filter((w: string) => w.length > 3)
+          .slice(0, 10);
+
+        if (words.length > 0) {
+          const tsquery = words.join(" | ");
+          const { data: kbResults } = await supabase
+            .from("kb_articles")
+            .select("title, url, category, content_snippet")
+            .textSearch("search_vector", tsquery)
+            .limit(3);
+
+          if (kbResults && kbResults.length > 0) {
+            kbContext = "\n\n**RELEVANT KNOWLEDGE BASE ARTICLES (use these to answer the lead's question accurately):**\n\n" +
+              kbResults.map((a: any, i: number) =>
+                `${i + 1}. **${a.title}** (${a.category})\n   URL: ${a.url}\n   Summary: ${a.content_snippet?.slice(0, 200)}...`
+              ).join("\n\n");
+          }
+        }
+      }
+    } catch (kbErr) {
+      console.warn("KB search failed (non-fatal):", kbErr);
+    }
+
     // Check if there's a custom template override in the DB
     const { data: template } = await supabase
       .from("prompt_templates")
@@ -292,7 +329,8 @@ serve(async (req) => {
       .replace(/\{\{is_first_reply\}\}/g, String(reply.is_first_reply || false))
       .replace(/\{\{lead_name\}\}/g, reply.sender_name || reply.lead_name || reply.lead_email || "")
       .replace(/\{\{deck_link\}\}/g, campaignDeck)
-      .replace(/\{\{calendar_link\}\}/g, campaignCalendar);
+      .replace(/\{\{calendar_link\}\}/g, campaignCalendar)
+      .replace(/\{\{kb_articles\}\}/g, kbContext);
 
     const systemPrompt = template?.system_prompt || DRAFT_SYSTEM_PROMPT;
 

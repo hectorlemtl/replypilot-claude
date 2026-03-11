@@ -256,18 +256,23 @@ Using originalEmail and emailAnalysis, choose ONE category:
 
 When the lead asks about a specific feature, how something works, pricing details, or migration process, include the most relevant Knowledge Base link from this list. This applies across ALL response categories where the lead has a specific question, not just feature/migration questions:
 
-- Getting started / migration: https://www.zeffy.com/help/getting-started
-- Donation forms: https://www.zeffy.com/help/donation-forms
-- Events & ticketing: https://www.zeffy.com/help/events
-- Memberships: https://www.zeffy.com/help/memberships
-- Peer-to-peer fundraising: https://www.zeffy.com/help/peer-to-peer
-- Tax receipts: https://www.zeffy.com/help/tax-receipts
-- Donor management / CRM: https://www.zeffy.com/help/donor-management
-- Online store: https://www.zeffy.com/help/online-store
-- Raffles & 50/50: https://www.zeffy.com/help/raffles
-- Auctions: https://www.zeffy.com/help/auctions
-- Integrations: https://www.zeffy.com/help/integrations
-- Payouts & banking: https://www.zeffy.com/help/payouts
+- Getting started / migration: https://support.zeffy.com/migrating-to-zeffy-a-step-by-step-guide
+- How Zeffy is free / business model: https://support.zeffy.com/how-is-zeffy-free
+- Donation forms: https://support.zeffy.com/how-do-i-set-up-a-donation-form
+- Events & ticketing: https://support.zeffy.com/how-can-i-set-up-an-event-on-zeffy
+- Memberships: https://support.zeffy.com/automatic-membership-renewals
+- Peer-to-peer fundraising: https://support.zeffy.com/how-do-i-set-up-an-open-registration-peer-to-peer-campaign
+- Tax receipts: https://support.zeffy.com/how-to-set-up-automatic-tax-receipts-1
+- Donor management / CRM: https://support.zeffy.com/what-can-i-do-on-my-donors-profile-page
+- Online store: https://support.zeffy.com/how-do-i-set-up-a-store-on-zeffy
+- Raffles & 50/50: https://support.zeffy.com/how-do-i-set-up-a-raffle-on-zeffy
+- Auctions: https://support.zeffy.com/creating-and-configuring-an-auction-form
+- Integrations: https://support.zeffy.com/do-you-integrate-with-other-tools
+- Payouts & banking: https://support.zeffy.com/how-often/-when-do-i-get-my-payout
+- Payment methods: https://support.zeffy.com/zeffy-payment-methods
+- Embedding forms: https://support.zeffy.com/how-do-i-add-my-form-to-my-website
+
+{{kb_articles}}
 
 Frame the link naturally, e.g.: "You can find more details on how that works here: [link]"
 Only include ONE relevant KB link per reply. Do not list multiple links.
