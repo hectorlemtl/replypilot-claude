@@ -10,7 +10,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { reply_id, draft_version_id, auto_send } = await req.json();
+    const { reply_id, draft_version_id, auto_send, extra_to_emails, extra_cc_emails } = await req.json();
     if (!reply_id) {
       return new Response(JSON.stringify({ error: "Missing reply_id" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -107,9 +107,21 @@ serve(async (req) => {
       },
     };
 
-    // Include CC recipients if available
-    if (reply.cc_emails && Array.isArray(reply.cc_emails) && reply.cc_emails.length > 0) {
-      sendPayload.cc_address_email_list = reply.cc_emails.join(", ");
+    // Include CC recipients — merge existing CCs with any extras added by reviewer
+    const allCcs: string[] = [
+      ...(reply.cc_emails || []),
+      ...(extra_cc_emails || []),
+    ].filter((e: string) => e && e.includes("@"));
+    if (allCcs.length > 0) {
+      sendPayload.cc_address_email_list = [...new Set(allCcs)].join(", ");
+    }
+
+    // Include extra To recipients if reviewer added any
+    if (extra_to_emails && Array.isArray(extra_to_emails) && extra_to_emails.length > 0) {
+      const toEmails = extra_to_emails.filter((e: string) => e && e.includes("@"));
+      if (toEmails.length > 0) {
+        sendPayload.to_address_email_list = toEmails.join(", ");
+      }
     }
 
     let sendResponse;

@@ -11,7 +11,7 @@ interface DraftPanelProps {
   reply: any;
   latestDraft: any;
   previousDraft: any;
-  onApprove: () => void;
+  onApprove: (opts?: { extraToEmails?: string[]; extraCcEmails?: string[] }) => void;
   onRegenerate: (feedback: string) => void;
   onMarkManual: () => void;
   onSaveDraft: (text: string) => void;
@@ -50,6 +50,8 @@ export function DraftPanel({
   const [isEditing, setIsEditing] = useState(false);
   const [editedDraft, setEditedDraft] = useState("");
   const [showDiff, setShowDiff] = useState(false);
+  const [extraTo, setExtraTo] = useState("");
+  const [extraCc, setExtraCc] = useState("");
 
   // Reset state when reply changes
   useEffect(() => {
@@ -57,6 +59,8 @@ export function DraftPanel({
     setIsEditing(false);
     setEditedDraft("");
     setShowDiff(false);
+    setExtraTo("");
+    setExtraCc("");
   }, [reply?.id]);
 
   // Auto-show diff when there's a previous version
@@ -226,13 +230,42 @@ export function DraftPanel({
 
       {/* Action bar - fixed at bottom */}
       <div className="p-3 border-t border-border shrink-0 space-y-2">
+        {/* Extra To/CC recipients */}
+        {canApprove && (
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-medium text-muted-foreground w-6 shrink-0">To:</span>
+              <input
+                type="text"
+                value={extraTo}
+                onChange={(e) => setExtraTo(e.target.value)}
+                placeholder="Add recipients (comma-separated)"
+                className="flex-1 h-6 px-2 text-[11px] rounded border border-border/60 bg-background text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-medium text-muted-foreground w-6 shrink-0">CC:</span>
+              <input
+                type="text"
+                value={extraCc}
+                onChange={(e) => setExtraCc(e.target.value)}
+                placeholder="Add CC (comma-separated)"
+                className="flex-1 h-6 px-2 text-[11px] rounded border border-border/60 bg-background text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
+          </div>
+        )}
+
         {canApprove && (
           <div className="flex gap-2">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   className="flex-1 bg-success hover:bg-success/90 text-success-foreground h-9"
-                  onClick={onApprove}
+                  onClick={() => onApprove({
+                    extraToEmails: extraTo ? extraTo.split(",").map(e => e.trim()) : undefined,
+                    extraCcEmails: extraCc ? extraCc.split(",").map(e => e.trim()) : undefined,
+                  })}
                   disabled={isApproving || !latestDraft}
                 >
                   <Send className="w-3.5 h-3.5 mr-1.5" />

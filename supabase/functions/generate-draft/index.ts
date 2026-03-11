@@ -317,6 +317,19 @@ serve(async (req) => {
 
     const draftText = (result.body_email_response as string) || "";
 
+    // If AI says no reply needed, mark as skipped — don't clog the review queue
+    if (draftText.trim() === "NO_REPLY_NEEDED" || draftText.trim().startsWith("NO_REPLY_NEEDED")) {
+      await supabase.from("inbound_replies").update({ status: "skipped" }).eq("id", reply_id);
+      await supabase.from("audit_logs").insert({
+        reply_id,
+        event_type: "draft_skipped_no_action",
+        event_payload: { reason: "AI determined no reply needed", temperature: reply.temperature, model: "claude-sonnet-4-20250514" },
+      });
+      return new Response(JSON.stringify({ success: true, skipped: true, reason: "no_reply_needed" }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Convert text to simple HTML
     const draftHtml = `<p>${draftText.replace(/\n\n/g, "</p><p>").replace(/\n/g, "<br>")}</p>`;
 

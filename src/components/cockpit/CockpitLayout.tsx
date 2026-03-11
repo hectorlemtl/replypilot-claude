@@ -30,7 +30,7 @@ export function CockpitLayout() {
     // Otherwise approve if possible
     const canApprove = data.selectedReply && ["awaiting_review", "regenerated"].includes(data.selectedReply.status);
     if (canApprove && data.latestDraft) {
-      data.approveMutation.mutate();
+      data.approveMutation.mutate({});
     }
   }, [data]);
 
@@ -39,7 +39,7 @@ export function CockpitLayout() {
     onPrev: data.selectPrev,
     onApprove: () => {
       const canApprove = data.selectedReply && ["awaiting_review", "regenerated"].includes(data.selectedReply.status);
-      if (canApprove && data.latestDraft) data.approveMutation.mutate();
+      if (canApprove && data.latestDraft) data.approveMutation.mutate({});
     },
     onRegenerate: () => feedbackRef.current?.focus(),
     onEdit: () => editorRef.current?.focus(),
@@ -107,7 +107,7 @@ export function CockpitLayout() {
             reply={data.selectedReply}
             latestDraft={data.latestDraft}
             previousDraft={data.previousDraft}
-            onApprove={() => data.approveMutation.mutate()}
+            onApprove={(opts) => data.approveMutation.mutate(opts || {})}
             onRegenerate={(fb) => data.regenerateMutation.mutate(fb)}
             onMarkManual={() => data.markManualMutation.mutate()}
             onSaveDraft={(text) => data.saveDraftMutation.mutate(text)}

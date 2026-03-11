@@ -262,7 +262,7 @@ export function useCockpitData() {
 
   // Approve & send
   const approveMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async ({ extraToEmails, extraCcEmails }: { extraToEmails?: string[]; extraCcEmails?: string[] } = {}) => {
       const latestDraft = drafts?.[0];
       if (!latestDraft) throw new Error("No draft to approve");
 
@@ -276,7 +276,12 @@ export function useCockpitData() {
       await supabase.from("inbound_replies").update({ status: "approved" }).eq("id", selectedId!);
 
       const { error } = await supabase.functions.invoke("send-reply", {
-        body: { reply_id: selectedId, draft_version_id: latestDraft.id },
+        body: {
+          reply_id: selectedId,
+          draft_version_id: latestDraft.id,
+          extra_to_emails: extraToEmails?.filter(e => e.trim()) || [],
+          extra_cc_emails: extraCcEmails?.filter(e => e.trim()) || [],
+        },
       });
       if (error) throw error;
     },
