@@ -1,9 +1,10 @@
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { BarChart3, Settings, Zap } from "lucide-react";
+import { BarChart3, Inbox, Settings, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { to: "/", icon: Zap, label: "Cockpit" },
+  { to: "/untracked", icon: Inbox, label: "Untracked" },
   { to: "/analytics", icon: BarChart3, label: "Analytics" },
   { to: "/settings", icon: Settings, label: "Settings" },
 ];
