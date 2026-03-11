@@ -74,28 +74,27 @@ export function sortReplies<T extends { received_at: string | null; updated_at?:
   sortBy: SortBy,
 ): T[] {
   const sorted = [...items];
-  // Use updated_at (latest activity) as primary sort timestamp, fall back to received_at
-  const activityTime = (r: T) => new Date((r as any).updated_at || r.received_at || 0).getTime();
+  const receivedTime = (r: T) => new Date(r.received_at || 0).getTime();
   sorted.sort((a, b) => {
     switch (sortBy) {
       case "newest":
-        return activityTime(b) - activityTime(a);
+        return receivedTime(b) - receivedTime(a);
       case "oldest":
-        return activityTime(a) - activityTime(b);
+        return receivedTime(a) - receivedTime(b);
       case "hot_first": {
         const pa = PRIORITY_ORDER[a.temperature || ""] ?? 99;
         const pb = PRIORITY_ORDER[b.temperature || ""] ?? 99;
-        return pa !== pb ? pa - pb : activityTime(b) - activityTime(a);
+        return pa !== pb ? pa - pb : receivedTime(b) - receivedTime(a);
       }
       case "failed_first": {
         const fa = a.status === "failed" ? 0 : 1;
         const fb = b.status === "failed" ? 0 : 1;
-        return fa !== fb ? fa - fb : activityTime(b) - activityTime(a);
+        return fa !== fb ? fa - fb : receivedTime(b) - receivedTime(a);
       }
       case "awaiting_first": {
         const sa = STATUS_PRIORITY[a.status] ?? 99;
         const sb = STATUS_PRIORITY[b.status] ?? 99;
-        return sa !== sb ? sa - sb : activityTime(b) - activityTime(a);
+        return sa !== sb ? sa - sb : receivedTime(b) - receivedTime(a);
       }
       default:
         return 0;
@@ -152,7 +151,7 @@ export function useCockpitData() {
       let query = supabase
         .from("inbound_replies")
         .select("id, lead_email, lead_name, temperature, status, reply_subject, reply_text, received_at, updated_at, wants_pdf, simple_affirmative, first_reply_received_at, archived_at")
-        .order("updated_at", { ascending: false });
+        .order("received_at", { ascending: false });
 
       // Archive filter: show only archived, or exclude archived for everything else
       if (activeFilter === "archived") {
