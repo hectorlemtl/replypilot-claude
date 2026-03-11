@@ -38,6 +38,7 @@ export function TriagePanel({
   onArchive,
   onRestore,
   onSaveNotes,
+  onSendReply,
   isMarkingSpam,
   isMarkingIgnored,
   isMarkingInterested,
