@@ -71,6 +71,17 @@ export function UntrackedEmailContent({ email, isLoading }: UntrackedEmailConten
               <span className="font-medium">Has campaign association</span>
             </div>
           )}
+          <div className="flex items-center gap-1">
+            <a
+              href="https://app.instantly.ai/app/unibox/emails/all"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-primary hover:underline"
+            >
+              <ExternalLink className="w-3 h-3" />
+              Open in Instantly
+            </a>
+          </div>
         </div>
       </div>
 
