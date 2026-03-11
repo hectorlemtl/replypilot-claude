@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useCallback, useState, useMemo } from "react";
 import { startOfDay, subDays } from "date-fns";
 
-export type QueueFilter = "hot_review" | "simple_review" | "failed" | "manual_review" | "all" | "sent" | "skipped";
+export type QueueFilter = "hot_review" | "simple_review" | "failed" | "manual_review" | "all" | "sent" | "skipped" | "waiting_for_reply";
 export type DatePreset = "all" | "today" | "yesterday" | "last7" | "last30" | "custom";
 export type SortBy = "newest" | "oldest" | "hot_first" | "failed_first" | "awaiting_first";
 
@@ -127,7 +127,7 @@ export function useCockpitData() {
   });
 
   const counts = useMemo(() => {
-    if (!allReplies) return { hot_review: 0, simple_review: 0, failed: 0, manual_review: 0, all: 0, sent: 0, skipped: 0 };
+    if (!allReplies) return { hot_review: 0, simple_review: 0, failed: 0, manual_review: 0, all: 0, sent: 0, skipped: 0, waiting_for_reply: 0 };
     return {
       hot_review: allReplies.filter(r => (r.temperature === "hot" || r.temperature === "warm") && ["awaiting_review", "regenerated"].includes(r.status)).length,
       simple_review: allReplies.filter(r => r.temperature === "simple" && ["awaiting_review", "regenerated"].includes(r.status)).length,
@@ -136,6 +136,7 @@ export function useCockpitData() {
       all: allReplies.length,
       sent: allReplies.filter(r => r.status === "sent").length,
       skipped: allReplies.filter(r => r.status === "skipped").length,
+      waiting_for_reply: allReplies.filter(r => r.status === "sent").length,
     };
   }, [allReplies]);
 
@@ -162,6 +163,9 @@ export function useCockpitData() {
           query = query.eq("status", "manual_review" as any);
           break;
         case "sent":
+          query = query.eq("status", "sent" as any).order("received_at", { ascending: false });
+          break;
+        case "waiting_for_reply":
           query = query.eq("status", "sent" as any).order("received_at", { ascending: false });
           break;
         case "skipped":
@@ -334,6 +338,23 @@ export function useCockpitData() {
     },
   });
 
+  // Mark as responded manually (when Julia replied directly outside the system)
+  const markRespondedMutation = useMutation({
+    mutationFn: async () => {
+      await supabase.from("inbound_replies").update({ status: "sent" }).eq("id", selectedId!);
+      await supabase.from("audit_logs").insert({
+        reply_id: selectedId!,
+        event_type: "manually_marked_responded",
+        event_payload: { marked_by: "reviewer" },
+      });
+    },
+    onSuccess: () => {
+      toast({ title: "Marked as responded" });
+      invalidateAll();
+      setTimeout(selectNext, 300);
+    },
+  });
+
   // Save edited draft
   const saveDraftMutation = useMutation({
     mutationFn: async (text: string) => {
@@ -409,6 +430,7 @@ export function useCockpitData() {
     approveMutation,
     regenerateMutation,
     markManualMutation,
+    markRespondedMutation,
     saveDraftMutation,
     retrySendMutation,
   };

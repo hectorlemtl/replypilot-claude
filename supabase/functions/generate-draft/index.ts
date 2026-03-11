@@ -41,9 +41,11 @@ Generate a tailored reply in Julia's voice that: (1) checks lead temperature and
 
 ## Step 1 — Draft condition
 
-- If leadTemperature is not "hot" or "warm" (case-insensitive), output exactly: NO_REPLY_NEEDED
+- If leadTemperature is "cold", "for_later", or "out_of_office" (case-insensitive), output exactly: NO_REPLY_NEEDED
 
-- Otherwise proceed to draft.
+- If leadTemperature is "hot", "warm", or "simple", proceed to draft.
+
+- For "simple" temperature: draft a brief, friendly reply that delivers the comparison deck (if first reply) and offers to answer questions. Keep it warm but efficient.
 
 ## Step 2 — Classify the response intent
 
@@ -63,7 +65,7 @@ Using originalEmail and emailAnalysis, choose ONE category:
 
 ## Step 3 — Respond according to category
 
-**All replies: 4-7 sentences, email body only, Julia's warm/helpful voice.**
+**All replies: 5-8 sentences, email body only, Julia's warm, conversational, and approachable voice. Add a personal touch — a brief encouraging comment about their nonprofit's work when possible, or a friendly transition sentence. Avoid sounding robotic or transactional.**
 
 ### a) Yes/affirmative
 
@@ -185,9 +187,9 @@ Using originalEmail and emailAnalysis, choose ONE category:
 
 - NEVER invent numbers about how many nonprofits Zeffy serves. The correct figure is 100,000+.
 
-**KNOWLEDGE BASE LINKS — Use when answering specific feature/migration questions (category c):**
+**KNOWLEDGE BASE LINKS — Use when answering ANY specific question (categories b, c, d, or any question from a hot lead):**
 
-When the lead asks about a specific feature or how something works, include the most relevant Knowledge Base link from this list:
+When the lead asks about a specific feature, how something works, pricing details, or migration process, include the most relevant Knowledge Base link from this list. This applies across ALL response categories where the lead has a specific question, not just feature/migration questions:
 
 - Getting started / migration: https://www.zeffy.com/help/getting-started
 - Donation forms: https://www.zeffy.com/help/donation-forms
@@ -207,7 +209,7 @@ Only include ONE relevant KB link per reply. Do not list multiple links.
 
 ## Step 6 — Tone and style
 
-- Warm, helpful, concise (Julia's voice). 4-7 sentences max.
+- Warm, helpful, conversational (Julia's voice). 5-8 sentences. Add a brief personal or encouraging sentence to make the reply feel human, not templated. For example, acknowledge their organization's mission, mention how exciting it is to help nonprofits save, or add a friendly conversational bridge between sections.
 
 - Personalize by referencing any organization name, state, or specifics found in originalEmail when available.
 
@@ -241,6 +243,24 @@ serve(async (req) => {
 
     const { data: reply } = await supabase.from("inbound_replies").select("*").eq("id", reply_id).single();
     if (!reply) throw new Error("Reply not found");
+
+    // Extract CC email addresses requested in the reply body
+    const ccPattern = /(?:please\s+)?(?:cc|copy|include|add|loop\s+in)\s+[:\s]*([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/gi;
+    const replyText = reply.reply_text || "";
+    const extractedCcs: string[] = [];
+    let ccMatch;
+    while ((ccMatch = ccPattern.exec(replyText)) !== null) {
+      const email = ccMatch[1].toLowerCase();
+      if (!extractedCcs.includes(email)) extractedCcs.push(email);
+    }
+
+    // Merge extracted CCs with existing ones
+    if (extractedCcs.length > 0) {
+      const existingCcs: string[] = reply.cc_emails || [];
+      const mergedCcs = [...new Set([...existingCcs, ...extractedCcs])];
+      await supabase.from("inbound_replies").update({ cc_emails: mergedCcs }).eq("id", reply_id);
+      reply.cc_emails = mergedCcs;
+    }
 
     // Get settings
     const { data: settings } = await supabase.from("app_settings").select("*").single();
@@ -309,9 +329,24 @@ serve(async (req) => {
       created_by: "ai",
     });
 
-    // Auto-send is disabled — all drafts go to manual review
-    {
-      await supabase.from("inbound_replies").update({ status: "awaiting_review" }).eq("id", reply_id);
+    // Check if auto-send is enabled for simple affirmatives
+    const shouldAutoSend = settings?.auto_send_simple_affirmative === true
+      && reply.temperature === "simple"
+      && reply.simple_affirmative === true;
+
+    await supabase.from("inbound_replies").update({ status: "awaiting_review" }).eq("id", reply_id);
+
+    // If auto-send enabled for simple affirmatives, trigger send
+    if (shouldAutoSend) {
+      const sendUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-reply`;
+      fetch(sendUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+        },
+        body: JSON.stringify({ reply_id }),
+      }).catch(console.error);
     }
 
     await supabase.from("audit_logs").insert({

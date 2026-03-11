@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, RefreshCw, AlertTriangle, Pencil, RotateCcw } from "lucide-react";
+import { Send, RefreshCw, AlertTriangle, Pencil, RotateCcw, CheckCircle } from "lucide-react";
 import { FeedbackChips } from "./FeedbackChips";
 import { DiffView } from "./DiffView";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -16,9 +16,11 @@ interface DraftPanelProps {
   onMarkManual: () => void;
   onSaveDraft: (text: string) => void;
   onRetrySend: () => void;
+  onMarkResponded: () => void;
   isApproving: boolean;
   isRegenerating: boolean;
   isMarkingManual: boolean;
+  isMarkingResponded: boolean;
   isSaving: boolean;
   isRetrying: boolean;
   feedbackRef?: React.RefObject<HTMLTextAreaElement>;
@@ -34,9 +36,11 @@ export function DraftPanel({
   onMarkManual,
   onSaveDraft,
   onRetrySend,
+  onMarkResponded,
   isApproving,
   isRegenerating,
   isMarkingManual,
+  isMarkingResponded,
   isSaving,
   isRetrying,
   feedbackRef,
@@ -263,6 +267,24 @@ export function DraftPanel({
             <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
             {isRetrying ? "Retrying..." : "Retry send"}
           </Button>
+        )}
+
+        {/* Mark as responded manually — for when Julia replied outside the system */}
+        {reply.status !== "sent" && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                className="w-full h-8 text-xs text-muted-foreground"
+                onClick={onMarkResponded}
+                disabled={isMarkingResponded}
+              >
+                <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
+                {isMarkingResponded ? "Marking..." : "Mark as responded"}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Mark this email as already responded to (e.g., replied directly in Gmail)</TooltipContent>
+          </Tooltip>
         )}
       </div>
     </div>
