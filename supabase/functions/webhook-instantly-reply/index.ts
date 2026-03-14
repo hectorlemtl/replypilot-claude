@@ -119,6 +119,7 @@ serve(async (req) => {
       lead_name: leadName,
       email_account: email_account || null,
       reply_subject: reply_subject || null,
+      source: "instantly",
       reply_text: reply_text || null,
       reply_html: reply_html || null,
       raw_payload: payload,

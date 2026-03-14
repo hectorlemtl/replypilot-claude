@@ -109,6 +109,11 @@ serve(async (req) => {
 
     await updateReply(supabase, reply_id, newStatus, category, reasoning, wants_pdf, simple_affirmative, sentiment);
 
+    // Sync classification back to SmartLead if applicable
+    if (reply.source === "smartlead" && reply.smartlead_lead_id) {
+      syncSmartLeadCategory(reply.smartlead_lead_id, category).catch(console.error);
+    }
+
     // If hot or simple, trigger draft generation
     if (!shouldSkip) {
       const draftUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/generate-draft`;
@@ -144,6 +149,33 @@ async function updateReply(
     event_type: "reply_classified",
     event_payload: { status, temperature, reasoning, wants_pdf, simple_affirmative, sentiment },
   });
+}
+
+// Map our temperature categories to SmartLead lead categories
+const SMARTLEAD_CATEGORY_MAP: Record<string, string> = {
+  hot: "Interested",
+  simple: "Interested",
+  cold: "Not Interested",
+  for_later: "Not Interested",
+  out_of_office: "Out of Office",
+};
+
+async function syncSmartLeadCategory(leadId: string, temperature: string) {
+  const apiKey = Deno.env.get("SMARTLEAD_API_KEY");
+  if (!apiKey) return;
+
+  const slCategory = SMARTLEAD_CATEGORY_MAP[temperature];
+  if (!slCategory) return;
+
+  try {
+    await fetch(`https://server.smartlead.ai/api/v1/master-inbox/update-lead-category?api_key=${apiKey}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lead_id: leadId, category: slCategory }),
+    });
+  } catch (err) {
+    console.error("SmartLead category sync failed:", err);
+  }
 }
 
 function respond(data: any) {

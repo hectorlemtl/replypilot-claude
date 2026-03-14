@@ -53,7 +53,9 @@ serve(async (req) => {
     const { data: settings } = await supabase.from("app_settings").select("*").single();
     const INSTANTLY_API_KEY = Deno.env.get("INSTANTLY_API_KEY");
 
-    if (!INSTANTLY_API_KEY) {
+    // Check API key for Instantly-source replies only
+    const replySource = reply.source || "instantly";
+    if (replySource === "instantly" && !INSTANTLY_API_KEY) {
       await supabase.from("send_attempts").insert({
         reply_id,
         draft_version_id: draft.id,
@@ -95,59 +97,192 @@ serve(async (req) => {
       fullText += `\n\nOn ${receivedDate}, ${senderName} <${senderEmail}> wrote:\n${quotedLines}`;
     }
 
-    // Instantly API v2 — POST /api/v2/emails/reply
-    // Required fields: reply_to_uuid, eaccount, subject, body { html?, text? }
-    const sendPayload: Record<string, unknown> = {
-      reply_to_uuid: reply.instantly_email_id,
-      eaccount: reply.email_account,
-      subject: reply.reply_subject?.startsWith("Re:") ? reply.reply_subject : `Re: ${reply.reply_subject || ""}`,
-      body: {
-        html: fullHtml,
-        text: fullText,
-      },
-    };
-
     // Include CC recipients — merge existing CCs with any extras added by reviewer
     const allCcs: string[] = [
       ...(reply.cc_emails || []),
       ...(extra_cc_emails || []),
     ].filter((e: string) => e && e.includes("@"));
-    if (allCcs.length > 0) {
-      sendPayload.cc_address_email_list = [...new Set(allCcs)].join(", ");
-    }
 
     // Include extra To recipients if reviewer added any
-    if (extra_to_emails && Array.isArray(extra_to_emails) && extra_to_emails.length > 0) {
-      const toEmails = extra_to_emails.filter((e: string) => e && e.includes("@"));
-      if (toEmails.length > 0) {
-        sendPayload.to_address_email_list = toEmails.join(", ");
-      }
-    }
+    const extraTos = (extra_to_emails || []).filter((e: string) => e && e.includes("@"));
 
+    const source = reply.source || "instantly";
     let sendResponse;
     let responseBody;
     let success = false;
+    let sendPayload: Record<string, unknown> = {};
+    let provider = source;
 
-    try {
-      sendResponse = await fetch("https://api.instantly.ai/api/v2/emails/reply", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${INSTANTLY_API_KEY}`,
+    if (source === "smartlead") {
+      // SmartLead API — reply to lead from master inbox
+      const SMARTLEAD_API_KEY = Deno.env.get("SMARTLEAD_API_KEY");
+      if (!SMARTLEAD_API_KEY) {
+        await supabase.from("send_attempts").insert({
+          reply_id,
+          draft_version_id: draft.id,
+          provider: "smartlead",
+          success: false,
+          request_payload: { error: "SMARTLEAD_API_KEY not configured" },
+        });
+        await supabase.from("inbound_replies").update({
+          status: "failed",
+          processing_error: "SmartLead API key not configured",
+        }).eq("id", reply_id);
+
+        return new Response(JSON.stringify({ error: "SMARTLEAD_API_KEY not configured" }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // SmartLead reply API: POST /campaigns/{campaign_id}/reply-email-thread
+      // Requires email_stats_id (stats_id from message-history) and reply_message_id
+      // If stats_id is missing, try to fetch it from the SmartLead API
+      let statsId = reply.smartlead_stats_id;
+      let replyMessageId = reply.smartlead_reply_message_id;
+      let replyTime = reply.smartlead_reply_time;
+
+      if (!reply.smartlead_campaign_id) {
+        await supabase.from("send_attempts").insert({
+          reply_id,
+          draft_version_id: draft.id,
+          provider: "smartlead",
+          success: false,
+          request_payload: { error: "Missing smartlead_campaign_id" },
+        });
+        await supabase.from("inbound_replies").update({
+          status: "failed",
+          processing_error: "Missing SmartLead campaign ID. Cannot reply.",
+        }).eq("id", reply_id);
+
+        return new Response(JSON.stringify({ error: "Missing SmartLead campaign ID" }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // If stats_id is missing, attempt to fetch it from message history
+      if (!statsId && reply.smartlead_lead_id) {
+        try {
+          const histResp = await fetch(
+            `https://server.smartlead.ai/api/v1/campaigns/${reply.smartlead_campaign_id}/leads/${reply.smartlead_lead_id}/message-history?api_key=${SMARTLEAD_API_KEY}`
+          );
+          if (histResp.ok) {
+            const histData = await histResp.json();
+            const history = histData.history || [];
+            const replies = history.filter((m: any) => m.type === "REPLY");
+            const latestReply = replies[replies.length - 1];
+            if (latestReply) {
+              statsId = latestReply.stats_id ? String(latestReply.stats_id) : null;
+              replyMessageId = replyMessageId || latestReply.message_id || null;
+              replyTime = replyTime || latestReply.time || null;
+              // Persist the recovered stats_id for future retries
+              if (statsId) {
+                await supabase.from("inbound_replies").update({
+                  smartlead_stats_id: statsId,
+                  smartlead_reply_message_id: replyMessageId,
+                  smartlead_reply_time: replyTime,
+                }).eq("id", reply_id);
+              }
+            }
+          }
+        } catch (histErr) {
+          console.error("Failed to recover SmartLead stats_id:", histErr);
+        }
+      }
+
+      if (!statsId) {
+        await supabase.from("send_attempts").insert({
+          reply_id,
+          draft_version_id: draft.id,
+          provider: "smartlead",
+          success: false,
+          request_payload: { error: "Missing smartlead_stats_id even after recovery attempt" },
+        });
+        await supabase.from("inbound_replies").update({
+          status: "failed",
+          processing_error: "Missing SmartLead thread context (stats_id). Cannot reply. Try re-polling this lead.",
+        }).eq("id", reply_id);
+
+        return new Response(JSON.stringify({ error: "Missing SmartLead thread context" }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      sendPayload = {
+        email_stats_id: statsId,
+        email_body: fullHtml,
+        reply_message_id: replyMessageId || undefined,
+        reply_email_time: replyTime || undefined,
+      };
+
+      if (allCcs.length > 0) {
+        sendPayload.cc = [...new Set(allCcs)].join(", ");
+      }
+
+      try {
+        sendResponse = await fetch(
+          `https://server.smartlead.ai/api/v1/campaigns/${reply.smartlead_campaign_id}/reply-email-thread?api_key=${SMARTLEAD_API_KEY}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(sendPayload),
+          }
+        );
+        const responseText = await sendResponse.text();
+        try {
+          responseBody = JSON.parse(responseText);
+        } catch {
+          responseBody = { error: responseText };
+        }
+        success = sendResponse.ok;
+      } catch (fetchErr) {
+        responseBody = { error: String(fetchErr) };
+      }
+    } else {
+      // Instantly API v2 — POST /api/v2/emails/reply
+      sendPayload = {
+        reply_to_uuid: reply.instantly_email_id,
+        eaccount: reply.email_account,
+        subject: reply.reply_subject?.startsWith("Re:") ? reply.reply_subject : `Re: ${reply.reply_subject || ""}`,
+        body: {
+          html: fullHtml,
+          text: fullText,
         },
-        body: JSON.stringify(sendPayload),
-      });
-      responseBody = await sendResponse.json();
-      success = sendResponse.ok;
-    } catch (fetchErr) {
-      responseBody = { error: String(fetchErr) };
+      };
+
+      if (allCcs.length > 0) {
+        sendPayload.cc_address_email_list = [...new Set(allCcs)].join(", ");
+      }
+
+      if (extraTos.length > 0) {
+        sendPayload.to_address_email_list = extraTos.join(", ");
+      }
+
+      try {
+        sendResponse = await fetch("https://api.instantly.ai/api/v2/emails/reply", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${INSTANTLY_API_KEY}`,
+          },
+          body: JSON.stringify(sendPayload),
+        });
+        const responseText = await sendResponse.text();
+        try {
+          responseBody = JSON.parse(responseText);
+        } catch {
+          responseBody = { error: responseText };
+        }
+        success = sendResponse.ok;
+      } catch (fetchErr) {
+        responseBody = { error: String(fetchErr) };
+      }
     }
 
     // Log send attempt
     await supabase.from("send_attempts").insert({
       reply_id,
       draft_version_id: draft.id,
-      provider: "instantly",
+      provider,
       provider_message_id: responseBody?.id || null,
       request_payload: sendPayload,
       response_payload: responseBody,
