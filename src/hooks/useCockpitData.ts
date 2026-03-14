@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useCallback, useState, useMemo } from "react";
 import { startOfDay, subDays } from "date-fns";
 
-export type QueueFilter = "hot_review" | "simple_review" | "failed" | "manual_review" | "all" | "sent" | "skipped" | "waiting_for_reply" | "archived";
+export type QueueFilter = "hot_review" | "simple_review" | "failed" | "manual_review" | "all" | "sent" | "skipped" | "archived";
 export type DatePreset = "all" | "today" | "yesterday" | "last7" | "last30" | "custom";
 export type SortBy = "newest" | "oldest" | "hot_first" | "failed_first" | "awaiting_first";
 
@@ -128,7 +128,7 @@ export function useCockpitData() {
   });
 
   const counts = useMemo(() => {
-    if (!allReplies) return { hot_review: 0, simple_review: 0, failed: 0, manual_review: 0, all: 0, sent: 0, skipped: 0, waiting_for_reply: 0, archived: 0 };
+    if (!allReplies) return { hot_review: 0, simple_review: 0, failed: 0, manual_review: 0, all: 0, sent: 0, skipped: 0, archived: 0 };
     const active = allReplies.filter(r => !r.archived_at);
     const archived = allReplies.filter(r => !!r.archived_at);
     return {
@@ -139,7 +139,6 @@ export function useCockpitData() {
       all: active.length,
       sent: active.filter(r => r.status === "sent").length,
       skipped: active.filter(r => r.status === "skipped").length,
-      waiting_for_reply: active.filter(r => r.status === "sent").length,
       archived: archived.length,
     };
   }, [allReplies]);
@@ -150,7 +149,7 @@ export function useCockpitData() {
     queryFn: async () => {
       let query = supabase
         .from("inbound_replies")
-        .select("id, lead_email, lead_name, temperature, status, reply_subject, reply_text, received_at, updated_at, wants_pdf, simple_affirmative, first_reply_received_at, archived_at")
+        .select("id, lead_email, lead_name, temperature, status, reply_subject, reply_text, received_at, updated_at, wants_pdf, simple_affirmative, first_reply_received_at, archived_at, source")
         .order("received_at", { ascending: false });
 
       // Archive filter: show only archived, or exclude archived for everything else
@@ -174,9 +173,6 @@ export function useCockpitData() {
           query = query.eq("status", "manual_review" as any);
           break;
         case "sent":
-          query = query.eq("status", "sent" as any);
-          break;
-        case "waiting_for_reply":
           query = query.eq("status", "sent" as any);
           break;
         case "skipped":
@@ -299,10 +295,15 @@ export function useCockpitData() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast({ title: "✓ Sent", description: "Reply approved and sent" });
+      // Flash the current queue item green before advancing
+      const el = document.querySelector(`[data-reply-id="${selectedId}"]`);
+      if (el) {
+        el.classList.add("animate-sent-flash");
+      }
+      toast({ title: "Sent", description: "Reply approved and sent" });
       invalidateAll();
-      // Auto-advance after a short delay to let data refresh
-      setTimeout(selectNext, 300);
+      // Auto-advance after flash completes
+      setTimeout(selectNext, 600);
     },
     onError: (err) => {
       toast({ title: "Send failed", description: String(err), variant: "destructive" });
@@ -447,6 +448,45 @@ export function useCockpitData() {
     },
   });
 
+  // Retry all failed
+  const retryAllFailedMutation = useMutation({
+    mutationFn: async () => {
+      const { data: failedReplies, error } = await supabase
+        .from("inbound_replies")
+        .select("id")
+        .eq("status", "failed")
+        .is("archived_at", null);
+      if (error) throw error;
+      if (!failedReplies?.length) return { count: 0 };
+
+      for (const reply of failedReplies) {
+        const { data: draft } = await supabase
+          .from("draft_versions")
+          .select("id")
+          .eq("reply_id", reply.id)
+          .order("version_number", { ascending: false })
+          .limit(1)
+          .single();
+        if (draft) {
+          await supabase.functions.invoke("send-reply", {
+            body: { reply_id: reply.id, draft_version_id: draft.id },
+          });
+        }
+      }
+      return { count: failedReplies.length };
+    },
+    onSuccess: (data) => {
+      toast({ title: `Retrying ${data?.count || 0} failed sends...` });
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["cockpit_all_replies"] });
+        queryClient.invalidateQueries({ queryKey: ["cockpit_queue"] });
+      }, 3000);
+    },
+    onError: (err) => {
+      toast({ title: "Retry failed", description: String(err), variant: "destructive" });
+    },
+  });
+
   return {
     // State
     selectedId,
@@ -487,5 +527,6 @@ export function useCockpitData() {
     restoreMutation,
     saveDraftMutation,
     retrySendMutation,
+    retryAllFailedMutation,
   };
 }

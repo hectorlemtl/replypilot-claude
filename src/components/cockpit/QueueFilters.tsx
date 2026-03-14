@@ -32,11 +32,11 @@ const DATE_PRESETS: { value: DatePreset; label: string }[] = [
 ];
 
 const SORT_OPTIONS: { value: SortBy; label: string }[] = [
-  { value: "oldest", label: "Oldest first" },
-  { value: "newest", label: "Newest first" },
+  { value: "newest", label: "Newest" },
+  { value: "oldest", label: "Oldest" },
   { value: "hot_first", label: "Hot first" },
   { value: "failed_first", label: "Failed first" },
-  { value: "awaiting_first", label: "Awaiting review first" },
+  { value: "awaiting_first", label: "Awaiting first" },
 ];
 
 export function QueueFilters({
@@ -70,7 +70,7 @@ export function QueueFilters({
 
         {/* Sort */}
         <Select value={sortBy} onValueChange={(v) => onSortByChange(v as SortBy)}>
-          <SelectTrigger className="h-7 text-[11px] flex-1 px-2 border-border/60">
+          <SelectTrigger className="h-7 text-[11px] flex-1 min-w-[100px] px-2 border-border/60">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

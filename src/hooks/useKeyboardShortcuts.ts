@@ -7,6 +7,7 @@ interface ShortcutHandlers {
   onRegenerate: () => void;
   onEdit: () => void;
   onManual: () => void;
+  onRetry: () => void;
   onSearch: () => void;
   onSubmit: () => void;
   onEscape: () => void;
@@ -62,6 +63,10 @@ export function useKeyboardShortcuts(handlers: ShortcutHandlers, enabled = true)
           e.preventDefault();
           handlers.onManual();
           break;
+        case "t":
+          e.preventDefault();
+          handlers.onRetry();
+          break;
         case "/":
           e.preventDefault();
           handlers.onSearch();
@@ -83,6 +88,7 @@ export const SHORTCUTS = [
   { key: "R", action: "Focus regenerate" },
   { key: "E", action: "Edit draft" },
   { key: "M", action: "Mark manual review" },
+  { key: "T", action: "Retry send" },
   { key: "/", action: "Focus search" },
   { key: "⌘↵", action: "Submit current action" },
   { key: "Esc", action: "Unfocus / close" },

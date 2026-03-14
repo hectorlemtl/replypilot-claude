@@ -75,7 +75,7 @@ export function useUntrackedData() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState<UntrackedFilter>("leads");
+  const [activeFilter, setActiveFilter] = useState<UntrackedFilter>("pending");
   const [search, setSearch] = useState("");
   const [datePreset, setDatePreset] = useState<DatePreset>("all");
   const [customDateFrom, setCustomDateFrom] = useState("");

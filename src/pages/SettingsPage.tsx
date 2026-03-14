@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { Save, Pencil, CheckCircle, XCircle } from "lucide-react";
+import { Save, Pencil, CheckCircle, XCircle, RefreshCw } from "lucide-react";
 import { PromptTester } from "@/components/cockpit/PromptTester";
 import { SendLogsPanel } from "@/components/settings/SendLogsPanel";
 import { format } from "date-fns";
@@ -110,6 +110,7 @@ export default function SettingsPage() {
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
           <TabsTrigger value="slack">Slack</TabsTrigger>
           <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
+          <TabsTrigger value="bulk">Bulk Actions</TabsTrigger>
           <TabsTrigger value="logs">Send Logs</TabsTrigger>
         </TabsList>
 
@@ -251,6 +252,10 @@ export default function SettingsPage() {
           </div>
         </TabsContent>
 
+        <TabsContent value="bulk">
+          <BulkActionsPanel />
+        </TabsContent>
+
         <TabsContent value="logs">
           <div className="space-y-4">
             <div className="bg-primary/5 border border-primary/10 rounded-lg p-3 mb-4">
@@ -339,5 +344,76 @@ function PromptTemplateCard({ template, onSave }: { template: any; onSave: (t: a
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function BulkActionsPanel() {
+  const { toast } = useToast();
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const [regenCount, setRegenCount] = useState(0);
+
+  const handleRegenerateAll = async () => {
+    setIsRegenerating(true);
+    setRegenCount(0);
+    try {
+      // Get all awaiting_review / regenerated replies that have drafts
+      const { data: replies, error } = await supabase
+        .from("inbound_replies")
+        .select("id")
+        .in("status", ["awaiting_review", "regenerated"])
+        .is("archived_at", null);
+      if (error) throw error;
+      if (!replies?.length) {
+        toast({ title: "No pending drafts to regenerate" });
+        setIsRegenerating(false);
+        return;
+      }
+
+      let count = 0;
+      for (const reply of replies) {
+        try {
+          await supabase.functions.invoke("generate-draft", {
+            body: { reply_id: reply.id },
+          });
+          count++;
+          setRegenCount(count);
+        } catch {
+          // continue with next
+        }
+      }
+      toast({ title: `Regenerated ${count} drafts with updated prompt` });
+    } catch (err) {
+      toast({ title: "Error", description: String(err), variant: "destructive" });
+    }
+    setIsRegenerating(false);
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Regenerate drafts</CardTitle>
+          <CardDescription>
+            Re-generate all pending drafts using the current prompt. Useful after updating prompt templates.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+            <p className="text-xs text-amber-800">
+              This will regenerate drafts for all replies currently in "Awaiting review" or "Regenerated" status.
+              Existing drafts will be preserved as previous versions.
+            </p>
+          </div>
+          <Button
+            onClick={handleRegenerateAll}
+            disabled={isRegenerating}
+            variant="outline"
+          >
+            <RefreshCw className={`w-4 h-4 mr-1.5 ${isRegenerating ? "animate-spin" : ""}`} />
+            {isRegenerating ? `Regenerating... (${regenCount})` : "Regenerate all pending drafts"}
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

@@ -68,9 +68,10 @@ export const ReplyQueue = forwardRef<HTMLInputElement, ReplyQueueProps>(
               return (
                 <button
                   key={reply.id}
+                  data-reply-id={reply.id}
                   onClick={() => onSelect(reply.id)}
                   className={cn(
-                    "w-full text-left px-3 py-2.5 border-b border-border transition-colors",
+                    "w-full text-left px-3 py-1.5 border-b border-border transition-colors",
                     isSelected
                       ? "bg-primary/8 border-l-2 border-l-primary"
                       : isHot && ["awaiting_review", "regenerated"].includes(reply.status)
@@ -78,31 +79,32 @@ export const ReplyQueue = forwardRef<HTMLInputElement, ReplyQueueProps>(
                         : "hover:bg-accent/50 border-l-2 border-l-transparent"
                   )}
                 >
-                  <div className="flex items-center gap-2 mb-0.5">
+                  <div className="flex items-center gap-1.5">
                     <span className="text-xs font-medium text-foreground truncate flex-1">
                       {reply.lead_name || reply.lead_email}
                     </span>
                     <TemperatureBadge temperature={reply.temperature} />
                   </div>
-                  <p className="text-[11px] text-muted-foreground truncate mb-1">
-                    {reply.reply_text?.slice(0, 60) || reply.reply_subject || "No preview"}
+                  <p className="text-[10px] text-muted-foreground truncate mt-0.5">
+                    {reply.reply_text?.slice(0, 80) || reply.reply_subject || "No preview"}
                   </p>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 mt-0.5">
                     <StatusBadge status={reply.status} />
+                    {reply.source === "smartlead" && (
+                      <span className="text-[9px] font-medium text-blue-600 bg-blue-50 px-1 rounded">SL</span>
+                    )}
                     {reply.first_reply_received_at && (
-                      <span className="flex items-center gap-0.5 text-[10px] text-amber-600 font-medium">
+                      <span className="flex items-center gap-0.5 text-[9px] text-amber-600 font-medium">
                         <MessageCircle className="w-2.5 h-2.5" />
-                        1st reply
+                        1st
                       </span>
                     )}
-                    {waitTime && (
-                      <span className={cn(
-                        "text-[10px]",
-                        isHot ? "text-destructive font-medium" : "text-muted-foreground"
-                      )}>
-                        {waitTime}
-                      </span>
-                    )}
+                    <span className={cn(
+                      "text-[9px] ml-auto",
+                      isHot ? "text-destructive font-medium" : "text-muted-foreground"
+                    )}>
+                      {waitTime}
+                    </span>
                   </div>
                 </button>
               );

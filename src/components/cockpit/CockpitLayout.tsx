@@ -46,6 +46,9 @@ export function CockpitLayout() {
     onManual: () => {
       if (data.selectedReply) data.markManualMutation.mutate();
     },
+    onRetry: () => {
+      if (data.selectedReply?.status === "failed" && data.latestDraft) data.retrySendMutation.mutate();
+    },
     onSearch: () => searchRef.current?.focus(),
     onSubmit: handleSubmit,
     onEscape: () => {
@@ -59,6 +62,8 @@ export function CockpitLayout() {
         counts={data.counts}
         activeFilter={data.activeFilter}
         onFilterChange={data.setActiveFilter}
+        onRetryAllFailed={() => data.retryAllFailedMutation.mutate()}
+        isRetryingAll={data.retryAllFailedMutation.isPending}
       />
 
       <ResizablePanelGroup direction="horizontal" className="flex-1">

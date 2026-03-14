@@ -11,6 +11,15 @@ export function UntrackedLayout() {
   const data = useUntrackedData();
   const searchRef = useRef<HTMLInputElement>(null);
 
+  // Auto-sync on mount (when user navigates to Untracked tab)
+  const hasSynced = useRef(false);
+  useEffect(() => {
+    if (!hasSynced.current) {
+      hasSynced.current = true;
+      data.syncNowMutation.mutate();
+    }
+  }, []);
+
   // Auto-select first email when queue loads
   useEffect(() => {
     if (data.queue.length && !data.selectedId) {

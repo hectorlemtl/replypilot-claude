@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { QueueFilter } from "@/hooks/useCockpitData";
-import { Flame, Zap, AlertTriangle, Eye, Keyboard, Clock, Archive } from "lucide-react";
+import { Flame, Zap, AlertTriangle, Eye, Keyboard, Send, Archive, List, RotateCcw } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { SHORTCUTS } from "@/hooks/useKeyboardShortcuts";
 import { useState } from "react";
@@ -9,65 +9,82 @@ interface WorkloadBarProps {
   counts: Record<QueueFilter, number>;
   activeFilter: QueueFilter;
   onFilterChange: (f: QueueFilter) => void;
+  onRetryAllFailed?: () => void;
+  isRetryingAll?: boolean;
 }
 
-const FILTERS: { key: QueueFilter; label: string; icon: typeof Flame; urgent?: boolean }[] = [
-  { key: "hot_review", label: "Hot", icon: Flame, urgent: true },
-  { key: "simple_review", label: "Simple", icon: Zap, urgent: true },
-  { key: "failed", label: "Failed", icon: AlertTriangle, urgent: true },
-  { key: "manual_review", label: "Manual", icon: Eye },
-  { key: "waiting_for_reply", label: "Waiting", icon: Clock },
-  { key: "all", label: "All", icon: Eye },
-  { key: "sent", label: "Sent", icon: Eye },
-  { key: "archived", label: "Archived", icon: Archive },
+type FilterGroup = "action" | "browse";
+
+const FILTERS: { key: QueueFilter; label: string; icon: typeof Flame; urgent?: boolean; group: FilterGroup }[] = [
+  { key: "hot_review", label: "Hot", icon: Flame, urgent: true, group: "action" },
+  { key: "simple_review", label: "Simple", icon: Zap, urgent: true, group: "action" },
+  { key: "failed", label: "Failed", icon: AlertTriangle, urgent: true, group: "action" },
+  { key: "manual_review", label: "Manual", icon: Eye, group: "action" },
+  { key: "all", label: "All", icon: List, group: "browse" },
+  { key: "sent", label: "Sent", icon: Send, group: "browse" },
+  { key: "skipped", label: "Skipped", icon: Eye, group: "browse" },
+  { key: "archived", label: "Archived", icon: Archive, group: "browse" },
 ];
 
-export function WorkloadBar({ counts, activeFilter, onFilterChange }: WorkloadBarProps) {
+export function WorkloadBar({ counts, activeFilter, onFilterChange, onRetryAllFailed, isRetryingAll }: WorkloadBarProps) {
   const [showShortcuts, setShowShortcuts] = useState(false);
+
+  const actionFilters = FILTERS.filter(f => f.group === "action");
+  const browseFilters = FILTERS.filter(f => f.group === "browse");
+
+  const renderFilter = ({ key, label, icon: Icon, urgent }: typeof FILTERS[number]) => {
+    const count = counts[key];
+    const isActive = activeFilter === key;
+    const hasItems = count > 0;
+
+    return (
+      <button
+        key={key}
+        onClick={() => onFilterChange(key)}
+        className={cn(
+          "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all",
+          isActive
+            ? "bg-primary text-primary-foreground"
+            : hasItems && urgent
+              ? "text-destructive hover:bg-destructive/10"
+              : "text-muted-foreground hover:bg-accent hover:text-foreground"
+        )}
+      >
+        <Icon className="w-3 h-3" />
+        {label}
+        {count > 0 && (
+          <span className={cn(
+            "min-w-[18px] h-[18px] rounded-full text-[10px] font-bold flex items-center justify-center",
+            isActive
+              ? "bg-primary-foreground/20 text-primary-foreground"
+              : hasItems && urgent
+                ? "bg-destructive/15 text-destructive"
+                : "bg-muted text-muted-foreground"
+          )}>
+            {count}
+          </span>
+        )}
+      </button>
+    );
+  };
 
   return (
     <div className="h-11 border-b border-border bg-card flex items-center px-3 gap-1 shrink-0">
-      {FILTERS.map(({ key, label, icon: Icon, urgent }) => {
-        const count = counts[key];
-        const isActive = activeFilter === key;
-        const hasItems = count > 0;
+      {actionFilters.map(renderFilter)}
+      <div className="w-px h-5 bg-border mx-1" />
+      {browseFilters.map(renderFilter)}
 
-        return (
+      <div className="ml-auto flex items-center gap-1">
+        {activeFilter === "failed" && counts.failed > 0 && onRetryAllFailed && (
           <button
-            key={key}
-            onClick={() => onFilterChange(key)}
-            className={cn(
-              "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all",
-              isActive
-                ? "bg-primary text-primary-foreground"
-                : hasItems && urgent
-                  ? "text-destructive hover:bg-destructive/10"
-                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
-            )}
+            onClick={onRetryAllFailed}
+            disabled={isRetryingAll}
+            className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
           >
-            {key === "hot_review" && <Flame className="w-3 h-3" />}
-            {key === "simple_review" && <Zap className="w-3 h-3" />}
-            {key === "failed" && <AlertTriangle className="w-3 h-3" />}
-            {key === "waiting_for_reply" && <Clock className="w-3 h-3" />}
-            {key === "archived" && <Archive className="w-3 h-3" />}
-            {label}
-            {count > 0 && (
-              <span className={cn(
-                "min-w-[18px] h-[18px] rounded-full text-[10px] font-bold flex items-center justify-center",
-                isActive
-                  ? "bg-primary-foreground/20 text-primary-foreground"
-                  : hasItems && urgent
-                    ? "bg-destructive/15 text-destructive"
-                    : "bg-muted text-muted-foreground"
-              )}>
-                {count}
-              </span>
-            )}
+            <RotateCcw className={cn("w-3 h-3", isRetryingAll && "animate-spin")} />
+            {isRetryingAll ? "Retrying..." : `Retry all (${counts.failed})`}
           </button>
-        );
-      })}
-
-      <div className="ml-auto">
+        )}
         <Tooltip>
           <TooltipTrigger asChild>
             <button

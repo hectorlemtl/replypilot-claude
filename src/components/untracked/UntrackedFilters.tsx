@@ -32,10 +32,10 @@ const DATE_PRESETS: { value: DatePreset; label: string }[] = [
 ];
 
 const SORT_OPTIONS: { value: SortBy; label: string }[] = [
-  { value: "newest", label: "Newest first" },
-  { value: "oldest", label: "Oldest first" },
+  { value: "newest", label: "Newest" },
+  { value: "oldest", label: "Oldest" },
   { value: "leads_first", label: "Leads first" },
-  { value: "confidence_high", label: "High confidence first" },
+  { value: "confidence_high", label: "Confidence" },
 ];
 
 export function UntrackedFilters({
@@ -67,7 +67,7 @@ export function UntrackedFilters({
         </Select>
 
         <Select value={sortBy} onValueChange={(v) => onSortByChange(v as SortBy)}>
-          <SelectTrigger className="h-7 text-[11px] flex-1 px-2 border-border/60">
+          <SelectTrigger className="h-7 text-[11px] flex-1 min-w-[100px] px-2 border-border/60">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

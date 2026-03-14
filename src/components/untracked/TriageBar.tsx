@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { UntrackedFilter } from "@/hooks/useUntrackedData";
-import { Star, HelpCircle, Inbox, Archive, RefreshCw, Sparkles } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { Star, HelpCircle, Inbox, Archive, RefreshCw, Sparkles, AlertCircle } from "lucide-react";
+import { formatDistanceToNow, differenceInHours } from "date-fns";
 
 interface TriageBarProps {
   counts: Record<UntrackedFilter, number>;
@@ -64,10 +64,21 @@ export function TriageBar({ counts, activeFilter, onFilterChange, syncLastAt, on
       })}
 
       <div className="ml-auto flex items-center gap-2">
-        {syncLastAt && (
-          <span className="text-[10px] text-muted-foreground">
-            Synced {formatDistanceToNow(new Date(syncLastAt), { addSuffix: true })}
-          </span>
+        {syncLastAt && (() => {
+          const hoursAgo = differenceInHours(new Date(), new Date(syncLastAt));
+          const isStale = hoursAgo >= 24;
+          return (
+            <span className={cn(
+              "text-[10px] flex items-center gap-1",
+              isStale ? "text-amber-600 font-medium" : "text-muted-foreground"
+            )}>
+              {isStale && <AlertCircle className="w-3 h-3" />}
+              Synced {formatDistanceToNow(new Date(syncLastAt), { addSuffix: true })}
+            </span>
+          );
+        })()}
+        {isSyncing && (
+          <span className="text-[10px] text-primary font-medium animate-pulse">Syncing...</span>
         )}
         <button
           onClick={onClassify}
@@ -83,7 +94,7 @@ export function TriageBar({ counts, activeFilter, onFilterChange, syncLastAt, on
           className="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors disabled:opacity-50"
         >
           <RefreshCw className={cn("w-3 h-3", isSyncing && "animate-spin")} />
-          Sync
+          {isSyncing ? "Syncing" : "Sync"}
         </button>
       </div>
     </div>
