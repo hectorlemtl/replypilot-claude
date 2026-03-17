@@ -495,10 +495,16 @@ export function useCockpitData() {
         .select("id")
         .in("temperature", ["hot", "warm"] as any)
         .in("status", ["awaiting_review", "regenerated"] as any)
-        .is("archived_at", null)
-        .is("review_status", null);
+        .is("archived_at", null);
       if (error) throw error;
       if (!hotReplies?.length) return { count: 0 };
+
+      // Reset review status so they can be re-reviewed
+      const ids = hotReplies.map((r) => r.id);
+      await supabase
+        .from("inbound_replies")
+        .update({ review_status: null, review_iterations: 0 })
+        .in("id", ids);
 
       // Fire all reviews in parallel (edge function handles its own state)
       const promises = hotReplies.map((reply) =>
