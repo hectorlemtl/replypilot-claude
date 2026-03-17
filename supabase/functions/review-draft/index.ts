@@ -26,7 +26,7 @@ You know these facts about Zeffy:
 
 NEVER use em-dashes or "--" or "-" in middle of sentence between words.`;
 
-const REVIEW_USER_PROMPT = `Review this email draft against 5 criteria.
+const REVIEW_USER_PROMPT = `Review this email draft against 6 criteria, then classify its complexity.
 
 ## Lead's original message
 {{reply_text}}
@@ -57,11 +57,11 @@ The draft must roughly match the lead's reply length and tone. Rules:
 - 1-2 sentence lead message → 3-5 sentence reply MAX
 - Detailed paragraph with questions → 5-7 sentence reply
 - If the draft is more than 2x the appropriate length, it FAILS.
-- Simple "yes/sure/send it" replies should get SHORT responses (3-4 sentences).
+- Simple "yes/sure/send it/I'll forward this" replies should get SHORT responses (2-4 sentences).
 
 ### 2. TONE
 Must sound like Julia: warm, conversational, not salesy. Check for:
-- Fake hype about the lead's mission or organization ("I love that you...") → FAIL
+- Fake hype about the lead's mission or organization ("I love that you...", "It's wonderful that...", "That's fantastic that...") → FAIL
 - Corporate jargon or robotic language → FAIL
 - Overly enthusiastic or transactional tone → FAIL
 - Em-dashes (—) or double dashes (--) in middle of sentences → FAIL
@@ -79,9 +79,10 @@ All facts must match Zeffy's verified information and KB articles:
 ### 4. RELEVANCE
 - The draft MUST answer questions the lead actually asked
 - The draft must NOT proactively explain things the lead didn't ask about
-- If the lead said "yes, send it" and the draft explains the business model → FAIL
+- If the lead said "yes, send it" or "I'll forward this" and the draft explains the business model or lists features → FAIL
 - If the lead asked about migration and the draft doesn't address it → FAIL
 - Answering unasked questions is a FAIL
+- Simple acknowledgment replies (forwarding, thanking, saying they'll share with someone) only need: thanks + deck (if sharing override applies) + "let me know if you have questions." Nothing more.
 
 ### 5. THREAD COHERENCE (for follow-ups)
 - Must NOT repeat information Julia already shared in the thread
@@ -90,11 +91,36 @@ All facts must match Zeffy's verified information and KB articles:
 - Must NOT contradict anything from thread history
 - If this is a first reply, this criterion auto-passes
 
+### 6. DECK SHARING LANGUAGE
+- If this is a FIRST REPLY (mode=first-reply) and the deck has NOT been shared yet (deck_already_shared=false), the draft must NOT say "I've shared" or "as I shared" or "I've already sent" — use present tense: "Here is your..." or "Here's a comparison deck..."
+- If the deck WAS already shared (deck_already_shared=true), do NOT re-share it unless the lead is forwarding to someone new (sharing override)
+- Wrong tense on deck sharing is a FAIL
+
+---
+
+## COMPLEXITY CLASSIFICATION
+
+After reviewing, classify the reply complexity:
+
+**SIMPLE** — The reply is straightforward and can be approved quickly. Examples:
+- Lead said "yes/sure/send it" → just deliver the deck + brief acknowledgment
+- Lead is forwarding to someone else → thank them + include deck for the new person
+- Lead said "thanks" or acknowledged receipt → brief "we're here if you need anything"
+- No specific questions asked, no objections to handle
+- The answer is obvious and doesn't require domain expertise
+
+**COMPLEX** — The reply needs human review. Examples:
+- Lead asked specific questions about features, pricing, or migration
+- Lead raised objections or concerns
+- Lead's situation requires nuanced response (multiple decision-makers, specific use case)
+- The draft references specific KB articles or technical details
+- Any ambiguity about what the lead is asking
+
 ---
 
 Evaluate each criterion carefully. If ALL pass, verdict is "pass". If ANY fails, verdict is "fail" with specific, actionable feedback for the draft writer to fix it in one round.
 
-Your feedback should be concise and direct, like a reviewer would write: "Too long, cut to 4 sentences. Remove the business model explanation, lead didn't ask. Drop the fake enthusiasm about their mission."`;
+Your feedback should be concise and direct: "Too long, cut to 3 sentences. Lead just forwarded the email, only needs thanks + deck for the new person. Drop the business model explanation."`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -183,15 +209,17 @@ serve(async (req) => {
             type: "object",
             properties: {
               verdict: { type: "string", enum: ["pass", "fail"], description: "Overall review verdict" },
+              complexity: { type: "string", enum: ["simple", "complex"], description: "Reply complexity: simple (ready to send quickly) or complex (needs human review)" },
               length_score: { type: "string", enum: ["pass", "fail"], description: "Length criterion result" },
               tone_score: { type: "string", enum: ["pass", "fail"], description: "Tone criterion result" },
               accuracy_score: { type: "string", enum: ["pass", "fail"], description: "Accuracy criterion result" },
               relevance_score: { type: "string", enum: ["pass", "fail"], description: "Relevance criterion result" },
               coherence_score: { type: "string", enum: ["pass", "fail"], description: "Thread coherence criterion result" },
+              deck_language_score: { type: "string", enum: ["pass", "fail"], description: "Deck sharing language/tense criterion result" },
               issues: { type: "string", description: "Specific issues found. Empty string if pass." },
               feedback: { type: "string", description: "Actionable feedback for regeneration. Empty string if pass." },
             },
-            required: ["verdict", "length_score", "tone_score", "accuracy_score", "relevance_score", "coherence_score", "issues", "feedback"],
+            required: ["verdict", "complexity", "length_score", "tone_score", "accuracy_score", "relevance_score", "coherence_score", "deck_language_score", "issues", "feedback"],
           },
         }],
         tool_choice: { type: "tool", name: "review_draft" },
@@ -207,12 +235,14 @@ serve(async (req) => {
         event_payload: {
           iteration: iterations,
           verdict: reviewResult.verdict,
+          complexity: reviewResult.complexity,
           scores: {
             length: reviewResult.length_score,
             tone: reviewResult.tone_score,
             accuracy: reviewResult.accuracy_score,
             relevance: reviewResult.relevance_score,
             coherence: reviewResult.coherence_score,
+            deck_language: reviewResult.deck_language_score,
           },
           issues: reviewResult.issues,
           feedback: reviewResult.feedback,
@@ -352,11 +382,20 @@ Revise the draft to address the feedback while keeping Julia's warm, concise voi
 
     // Final status update
     const reviewStatus = finalVerdict === "pass" ? "reviewed" : "needs_human";
-    await supabase.from("inbound_replies").update({
+    const isSimple = finalVerdict === "pass" && lastReviewResult?.complexity === "simple";
+
+    const updatePayload: Record<string, any> = {
       review_status: reviewStatus,
       review_iterations: iterations,
-      status: "awaiting_review", // Keep in review queue for human approval
-    }).eq("id", reply_id);
+      status: "awaiting_review",
+    };
+
+    // Reclassify as simple if the reviewer flagged it — moves to Simple tab for fast approval
+    if (isSimple) {
+      updatePayload.temperature = "simple";
+    }
+
+    await supabase.from("inbound_replies").update(updatePayload).eq("id", reply_id);
 
     return new Response(JSON.stringify({
       success: true,
