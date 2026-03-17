@@ -121,7 +121,7 @@ export function DraftPanel({
             <span className="text-xs font-semibold text-foreground">Draft</span>
             {latestDraft && (
               <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                v{latestDraft.version_number} · {latestDraft.created_by}
+                v{latestDraft.version_number} · {latestDraft.created_by === "ai:first-reply" ? "first-reply" : latestDraft.created_by === "ai:follow-up" ? "follow-up" : latestDraft.created_by === "manual" ? "manual" : latestDraft.created_by}
               </span>
             )}
           </div>

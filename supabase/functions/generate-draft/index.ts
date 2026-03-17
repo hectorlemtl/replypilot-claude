@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { callAnthropic } from "../_shared/anthropic.ts";
+import { buildThreadContext } from "../_shared/thread-context.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,6 +13,12 @@ const DRAFT_SYSTEM_PROMPT = `You are an email copywriter assistant.
 MAKE SURE NEVER TO USE "\u2014" or any "--" or any "-" in middle of sentence between words like an AI is doing.
 
 Example of wrong structure: "Here is your PayPal vs Zeffy comparison deck\u2014it includes a fee breakdown, feature comparison, and real case studies from nonprofits who made the switch"`;
+
+const FOLLOW_UP_SYSTEM_PROMPT = `You are an email copywriter assistant for follow-up replies in an existing thread.
+
+MAKE SURE NEVER TO USE "\u2014" or any "--" or any "-" in middle of sentence between words like an AI is doing.
+
+You have full thread history. Do NOT repeat information already shared. Answer the lead's specific question directly.`;
 
 const DRAFT_USER_PROMPT = `#CONTEXT#
 
@@ -267,6 +274,12 @@ Only include ONE relevant KB link per reply. Do not list multiple links.
 
 - Warm, helpful, conversational (Julia's voice). Avoid sounding robotic or transactional.
 
+- **TONE MIRRORING:** Match your reply length and formality to the lead's message:
+  - If the lead wrote 1-2 sentences, reply with 3-4 sentences max.
+  - If the lead wrote a detailed paragraph, reply with 5-7 sentences.
+  - Casual lead (hey, thanks, sure) = casual Julia. Formal lead = professional but warm Julia.
+  - Match energy level: enthusiastic lead = enthusiastic reply, matter-of-fact = matter-of-fact.
+
 - **NO FAKE HYPE OR FLATTERY.** Do NOT insert comments about the lead's organization mission, values, or work unless they specifically brought it up AND it's directly relevant to the reply. Examples of what NOT to do:
   - "I love that [Organization] is focused on [mission]!" — DO NOT DO THIS
   - "That's fantastic that you're involving your Treasurer!" — DO NOT DO THIS
@@ -291,6 +304,118 @@ Only include ONE relevant KB link per reply. Do not list multiple links.
 
 - End with: "Best," or "Warmly," + "Julia" on the next line.`;
 
+const FOLLOW_UP_USER_PROMPT = `#CONTEXT#
+
+You are drafting a FOLLOW-UP reply for Julia from Zeffy in an ongoing email thread. The lead has already been contacted before. Your job is to answer their latest message directly, without repeating information already shared in the thread.
+
+#THREAD HISTORY#
+
+{{thread_history}}
+
+#CURRENT MESSAGE TO REPLY TO#
+
+- originalEmail: "{{reply_text}}"
+- emailAnalysis: "{{reasoning}}"
+- leadTemperature: "{{temperature}}"
+- Lead Name: "{{lead_name}}"
+- Deck already shared in thread: {{deck_already_shared}}
+- Thread length: {{thread_length}} messages
+
+#INSTRUCTIONS#
+
+## Step 1 — Draft condition
+
+- If leadTemperature is "cold", "for_later", or "out_of_office" (case-insensitive), output exactly: NO_REPLY_NEEDED
+- Otherwise, proceed to draft.
+
+## Step 2 — Answer the question directly
+
+Read the lead's latest message carefully. Identify what they are specifically asking about or responding to. Draft a reply that answers THAT question directly. Do NOT re-introduce Zeffy, re-explain the business model, or re-share information already in the thread.
+
+## Step 3 — Comparison deck rules (simplified for follow-ups)
+
+Default: Do NOT include the deck. It was likely already shared.
+
+ONLY include the deck if:
+- deck_already_shared is false AND the lead is explicitly requesting comparison info or the deck
+- The lead mentions sharing/forwarding to their team, ED, board, or leadership (sharing override)
+
+If including: "Here is the PayPal vs Zeffy comparison deck: {{deck_link}}"
+
+**Platform detection still applies** — if the lead mentions a non-PayPal platform, use the matching comparison URL:
+- Stripe: https://www.zeffy.com/compare/zeffy-vs-stripe
+- Squarespace: https://www.zeffy.com/compare/zeffy-vs-squarespace
+- Eventbrite: https://www.zeffy.com/compare/zeffy-vs-eventbrite
+- Venmo: https://www.zeffy.com/compare/zeffy-vs-venmo
+- GoFundMe: https://www.zeffy.com/compare/zeffy-vs-gofundme
+- Donorbox: https://www.zeffy.com/compare/zeffy-vs-donorbox
+- Square: https://www.zeffy.com/compare/zeffy-vs-square
+- Bloomerang: https://www.zeffy.com/compare/zeffy-vs-bloomerang
+- Wild Apricot: https://www.zeffy.com/compare/zeffy-vs-wildapricot
+- Unknown platform: https://www.zeffy.com/home/compare
+
+## Step 4 — Knowledge base (for specific questions)
+
+{{kb_articles}}
+
+Use KB articles to answer product/feature/migration questions accurately. For basic pricing/free model questions, use the hard facts below instead.
+
+## Step 5 — Verified facts & guardrails
+
+**HARD FACTS (use these exact figures):**
+- Zeffy serves 100,000+ nonprofits.
+- Zeffy is 100% free for nonprofits. $0 platform fees, $0 transaction fees.
+- PayPal charges 1.99% + $0.49 per transaction.
+- Zeffy is funded by optional donor contributions at checkout. About two-thirds of donors choose to contribute.
+- Zeffy features: donations, events, raffles, auctions, stores, memberships, donor CRM, automated tax receipts.
+- Case studies: https://www.zeffy.com/home/case-studies
+- Register: https://www.zeffy.com/register
+- Demo: https://www.zeffy.com/home/demo
+
+**CRITICAL RULES:**
+- DO NOT use "$100 raised = $100 kept" on follow-ups. That phrase is for first replies only.
+- DO NOT list Zeffy product suite unless specifically asked.
+- DO NOT offer 1-on-1 calls. Redirect to demo page when requested.
+- DO NOT invent phone numbers. NEVER include any phone number.
+- DO NOT invent savings figures or fictional nonprofits.
+- DO NOT re-send the deck if already shared (check thread history).
+- DO NOT repeat information Julia already said in the thread.
+
+## Step 6 — Tone and style
+
+**TONE MIRRORING:**
+- If the lead wrote 1 sentence, reply with 2-4 sentences max.
+- If the lead wrote a paragraph with details, reply with 4-7 sentences.
+- Match formality: casual lead = casual Julia, formal lead = professional but warm Julia.
+- Match energy: enthusiastic lead = enthusiastic reply, matter-of-fact = matter-of-fact.
+
+**NO FAKE HYPE OR FLATTERY.** Do NOT comment on the lead's mission or organization unless they brought it up.
+
+Warm, helpful, conversational (Julia's voice). One clear next step.
+
+## Step 7 — Formatting
+
+- Email body text only.
+- Start with: "Hi {firstName}," or "Hey {firstName},"
+- End with: "Best," or "Warmly," + "Julia" on the next line.`;
+
+// Check if a question is basic pricing/free model (skip semantic KB for these)
+function isBasicPricingQuestion(text: string): boolean {
+  const patterns = [
+    /is it (really )?(truly )?(actually )?free/i,
+    /how (do|does) (you|zeffy) make money/i,
+    /what'?s the catch/i,
+    /no fees/i,
+    /how (is|are) (you|zeffy) funded/i,
+    /100%? free/i,
+    /transaction fees?/i,
+    /platform fees?/i,
+    /how much does (it|zeffy) cost/i,
+    /pricing/i,
+  ];
+  return patterns.some((p) => p.test(text));
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -309,6 +434,10 @@ serve(async (req) => {
 
     const { data: reply } = await supabase.from("inbound_replies").select("*").eq("id", reply_id).single();
     if (!reply) throw new Error("Reply not found");
+
+    // Determine mode: first-reply vs follow-up
+    const isFirstReply = reply.is_first_reply === true;
+    const mode = isFirstReply ? "first-reply" : "follow-up";
 
     // Extract CC email addresses requested in the reply body
     const ccPattern = /(?:please\s+)?(?:cc|copy|include|add|loop\s+in)\s+[:\s]*([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/gi;
@@ -340,48 +469,54 @@ serve(async (req) => {
       if (campaign?.calendar_link) campaignCalendar = campaign.calendar_link;
     }
 
-    // Search KB articles for relevant context based on the lead's reply
-    let kbContext = "";
-    try {
-      const searchText = (reply.reply_text || "").slice(0, 300);
-      if (searchText.trim()) {
-        // Convert to tsquery: take meaningful words, join with |
-        const words = searchText
-          .replace(/[^a-zA-Z0-9\s]/g, " ")
-          .split(/\s+/)
-          .filter((w: string) => w.length > 3)
-          .slice(0, 10);
-
-        if (words.length > 0) {
-          const tsquery = words.join(" | ");
-          const { data: kbResults } = await supabase
-            .from("kb_articles")
-            .select("title, url, category, content_snippet")
-            .textSearch("search_vector", tsquery)
-            .limit(3);
-
-          if (kbResults && kbResults.length > 0) {
-            kbContext = "\n\n**RELEVANT KNOWLEDGE BASE ARTICLES (use these to answer the lead's question accurately):**\n\n" +
-              kbResults.map((a: any, i: number) =>
-                `${i + 1}. **${a.title}** (${a.category})\n   URL: ${a.url}\n   Summary: ${a.content_snippet?.slice(0, 200)}...`
-              ).join("\n\n");
-          }
-        }
+    // Build thread context for follow-ups
+    let threadContext = { entries: [], formatted: "", deckAlreadyShared: false, threadLength: 0 } as Awaited<ReturnType<typeof buildThreadContext>>;
+    if (!isFirstReply) {
+      try {
+        threadContext = await buildThreadContext(supabase, reply.lead_email, reply_id);
+      } catch (err) {
+        console.warn("Thread context build failed (non-fatal):", err);
       }
-    } catch (kbErr) {
-      console.warn("KB search failed (non-fatal):", kbErr);
     }
 
-    // Check if there's a custom template override in the DB
+    // KB search — different strategies for first-reply vs follow-up
+    let kbContext = "";
+    if (isFirstReply) {
+      // First reply: basic tsquery search (existing behavior)
+      kbContext = await searchKbLocal(supabase, replyText);
+    } else {
+      // Follow-up: semantic KB search for product/feature questions, skip for basic pricing
+      if (!isBasicPricingQuestion(replyText)) {
+        kbContext = await searchKbSemantic(replyText);
+        // Fallback to local tsquery if semantic search fails
+        if (!kbContext) {
+          kbContext = await searchKbLocal(supabase, replyText);
+        }
+      }
+    }
+
+    // Select template based on mode
+    const templateType = isFirstReply ? "draft_generation" : "follow_up_generation";
     const { data: template } = await supabase
       .from("prompt_templates")
       .select("*")
-      .eq("template_type", "draft_generation")
+      .eq("template_type", templateType)
       .eq("active", true)
       .single();
 
-    // Build the prompt with all available data — use DB template if available, fallback to hardcoded
-    const rawUserPrompt = template?.user_prompt || DRAFT_USER_PROMPT;
+    // Build prompt — use DB template if available, fallback to hardcoded
+    let rawUserPrompt: string;
+    let systemPrompt: string;
+
+    if (isFirstReply) {
+      rawUserPrompt = template?.user_prompt || DRAFT_USER_PROMPT;
+      systemPrompt = template?.system_prompt || DRAFT_SYSTEM_PROMPT;
+    } else {
+      rawUserPrompt = template?.user_prompt || FOLLOW_UP_USER_PROMPT;
+      systemPrompt = template?.system_prompt || FOLLOW_UP_SYSTEM_PROMPT;
+    }
+
+    // Replace template variables (superset of both prompt types)
     const userPrompt = rawUserPrompt
       .replace(/\{\{reply_text\}\}/g, reply.reply_text || "")
       .replace(/\{\{reasoning\}\}/g, reply.reasoning || "")
@@ -391,12 +526,13 @@ serve(async (req) => {
       .replace(/\{\{lead_name\}\}/g, reply.sender_name || reply.lead_name || reply.lead_email || "")
       .replace(/\{\{deck_link\}\}/g, campaignDeck)
       .replace(/\{\{calendar_link\}\}/g, campaignCalendar)
-      .replace(/\{\{kb_articles\}\}/g, kbContext);
-
-    const systemPrompt = template?.system_prompt || DRAFT_SYSTEM_PROMPT;
+      .replace(/\{\{kb_articles\}\}/g, kbContext)
+      .replace(/\{\{thread_history\}\}/g, threadContext.formatted || "No previous thread history.")
+      .replace(/\{\{deck_already_shared\}\}/g, String(threadContext.deckAlreadyShared))
+      .replace(/\{\{thread_length\}\}/g, String(threadContext.threadLength));
 
     const result = await callAnthropic({
-      model: "claude-sonnet-4-20250514",
+      model: template?.model_name || "claude-sonnet-4-20250514",
       max_tokens: 2048,
       system: systemPrompt,
       messages: [{ role: "user", content: userPrompt }],
@@ -422,7 +558,7 @@ serve(async (req) => {
       await supabase.from("audit_logs").insert({
         reply_id,
         event_type: "draft_skipped_no_action",
-        event_payload: { reason: "AI determined no reply needed", temperature: reply.temperature, model: "claude-sonnet-4-20250514" },
+        event_payload: { reason: "AI determined no reply needed", temperature: reply.temperature, mode, model: template?.model_name || "claude-sonnet-4-20250514" },
       });
       return new Response(JSON.stringify({ success: true, skipped: true, reason: "no_reply_needed" }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -432,13 +568,14 @@ serve(async (req) => {
     // Convert text to simple HTML
     const draftHtml = `<p>${draftText.replace(/\n\n/g, "</p><p>").replace(/\n/g, "<br>")}</p>`;
 
-    // Save draft
+    // Save draft with mode-specific created_by
+    const createdBy = `ai:${mode}`;
     await supabase.from("draft_versions").insert({
       reply_id,
       version_number: 1,
       draft_text: draftText,
       draft_html: draftHtml,
-      created_by: "ai",
+      created_by: createdBy,
     });
 
     // Check if auto-send is enabled for simple affirmatives
@@ -468,10 +605,18 @@ serve(async (req) => {
     await supabase.from("audit_logs").insert({
       reply_id,
       event_type: "draft_generated",
-      event_payload: { version: 1, auto_send: shouldAutoSend, model: "claude-sonnet-4-20250514" },
+      event_payload: {
+        version: 1,
+        mode,
+        auto_send: shouldAutoSend,
+        model: template?.model_name || "claude-sonnet-4-20250514",
+        thread_length: threadContext.threadLength,
+        deck_already_shared: threadContext.deckAlreadyShared,
+        kb_search: kbContext ? "included" : "none",
+      },
     });
 
-    return new Response(JSON.stringify({ success: true, auto_send: shouldAutoSend }), {
+    return new Response(JSON.stringify({ success: true, mode, auto_send: shouldAutoSend }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
@@ -481,3 +626,80 @@ serve(async (req) => {
     });
   }
 });
+
+// Local tsquery-based KB search (used for first replies and as fallback)
+async function searchKbLocal(supabase: any, replyText: string): Promise<string> {
+  try {
+    const searchText = (replyText || "").slice(0, 300);
+    if (!searchText.trim()) return "";
+
+    const words = searchText
+      .replace(/[^a-zA-Z0-9\s]/g, " ")
+      .split(/\s+/)
+      .filter((w: string) => w.length > 3)
+      .slice(0, 10);
+
+    if (words.length === 0) return "";
+
+    const tsquery = words.join(" | ");
+    const { data: kbResults } = await supabase
+      .from("kb_articles")
+      .select("title, url, category, content_snippet")
+      .textSearch("search_vector", tsquery)
+      .limit(3);
+
+    if (kbResults && kbResults.length > 0) {
+      return "\n\n**RELEVANT KNOWLEDGE BASE ARTICLES (use these to answer the lead's question accurately):**\n\n" +
+        kbResults.map((a: any, i: number) =>
+          `${i + 1}. **${a.title}** (${a.category})\n   URL: ${a.url}\n   Summary: ${a.content_snippet?.slice(0, 200)}...`
+        ).join("\n\n");
+    }
+  } catch (kbErr) {
+    console.warn("KB local search failed (non-fatal):", kbErr);
+  }
+  return "";
+}
+
+// Semantic KB search via edge function (used for follow-up product/feature questions)
+async function searchKbSemantic(replyText: string): Promise<string> {
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!supabaseUrl || !serviceKey) return "";
+
+    const response = await fetch(`${supabaseUrl}/functions/v1/search-kb`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${serviceKey}`,
+      },
+      body: JSON.stringify({
+        query: replyText.slice(0, 300),
+        match_count: 3,
+      }),
+    });
+
+    if (!response.ok) {
+      console.warn("Semantic KB search returned:", response.status);
+      return "";
+    }
+
+    const results = await response.json();
+    if (!results || !Array.isArray(results) || results.length === 0) return "";
+
+    // Filter by similarity threshold and format
+    const relevant = results
+      .filter((r: any) => r.similarity > 0.4)
+      .slice(0, 3);
+
+    if (relevant.length === 0) return "";
+
+    return "\n\n**RELEVANT KNOWLEDGE BASE ARTICLES (use these to answer the lead's question accurately):**\n\n" +
+      relevant.map((a: any, i: number) =>
+        `${i + 1}. **${a.title}** (${a.category || "General"})\n   URL: ${a.url}\n   Summary: ${(a.content || a.content_snippet || "").slice(0, 800)}`
+      ).join("\n\n");
+  } catch (err) {
+    console.warn("Semantic KB search failed (non-fatal):", err);
+    return "";
+  }
+}

@@ -333,7 +333,7 @@ function PromptTemplateCard({ template, onSave }: { template: any; onSave: (t: a
               <Label className="text-xs">User prompt</Label>
               <Textarea value={local.user_prompt || ""} onChange={(e) => setLocal({ ...local, user_prompt: e.target.value })} className="min-h-[120px] text-xs font-mono" />
               <p className="text-[10px] text-muted-foreground">
-                Available variables: {"{{reply_text}}"}, {"{{lead_email}}"}, {"{{temperature}}"}, {"{{wants_pdf}}"}, {"{{calendar_link}}"}, {"{{deck_link}}"}, {"{{previous_draft}}"}, {"{{feedback}}"}
+                Available variables: {"{{reply_text}}"}, {"{{lead_email}}"}, {"{{temperature}}"}, {"{{wants_pdf}}"}, {"{{calendar_link}}"}, {"{{deck_link}}"}, {"{{previous_draft}}"}, {"{{feedback}}"}, {"{{thread_history}}"}, {"{{deck_already_shared}}"}, {"{{thread_length}}"}, {"{{mode}}"}, {"{{mode_guidance}}"}
               </p>
             </div>
             <div className="flex gap-2">
