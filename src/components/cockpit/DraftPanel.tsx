@@ -124,6 +124,21 @@ export function DraftPanel({
                 v{latestDraft.version_number} · {latestDraft.created_by === "ai:first-reply" ? "first-reply" : latestDraft.created_by === "ai:follow-up" ? "follow-up" : latestDraft.created_by === "manual" ? "manual" : latestDraft.created_by}
               </span>
             )}
+            {reply.review_status === "reviewing" && (
+              <span className="text-[10px] text-violet-600 bg-violet-50 px-1.5 py-0.5 rounded animate-pulse font-medium">
+                reviewing...
+              </span>
+            )}
+            {reply.review_status === "reviewed" && (
+              <span className="text-[10px] text-green-600 bg-green-50 px-1.5 py-0.5 rounded font-medium">
+                R{reply.review_iterations}
+              </span>
+            )}
+            {reply.review_status === "needs_human" && (
+              <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded font-medium">
+                R{reply.review_iterations}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-1">
             {previousDraft && (

@@ -120,7 +120,7 @@ export function useCockpitData() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("inbound_replies")
-        .select("id, status, temperature, received_at, archived_at");
+        .select("id, status, temperature, received_at, archived_at, review_status, review_iterations");
       if (error) throw error;
       return data;
     },
@@ -149,7 +149,7 @@ export function useCockpitData() {
     queryFn: async () => {
       let query = supabase
         .from("inbound_replies")
-        .select("id, lead_email, lead_name, temperature, status, reply_subject, reply_text, received_at, updated_at, wants_pdf, simple_affirmative, first_reply_received_at, archived_at, source")
+        .select("id, lead_email, lead_name, temperature, status, reply_subject, reply_text, received_at, updated_at, wants_pdf, simple_affirmative, first_reply_received_at, archived_at, source, review_status, review_iterations")
         .order("received_at", { ascending: false });
 
       // Archive filter: show only archived, or exclude archived for everything else
@@ -487,6 +487,46 @@ export function useCockpitData() {
     },
   });
 
+  // Review all hot drafts
+  const reviewAllHotMutation = useMutation({
+    mutationFn: async () => {
+      const { data: hotReplies, error } = await supabase
+        .from("inbound_replies")
+        .select("id")
+        .in("temperature", ["hot", "warm"] as any)
+        .in("status", ["awaiting_review", "regenerated"] as any)
+        .is("archived_at", null)
+        .is("review_status", null);
+      if (error) throw error;
+      if (!hotReplies?.length) return { count: 0 };
+
+      // Fire all reviews in parallel (edge function handles its own state)
+      const promises = hotReplies.map((reply) =>
+        supabase.functions.invoke("review-draft", {
+          body: { reply_id: reply.id },
+        })
+      );
+
+      await Promise.allSettled(promises);
+      return { count: hotReplies.length };
+    },
+    onSuccess: (data) => {
+      toast({ title: `Reviewing ${data?.count || 0} hot drafts...`, description: "AI reviewer is optimizing drafts" });
+      // Poll for updates as reviews complete
+      const pollInterval = setInterval(() => {
+        queryClient.invalidateQueries({ queryKey: ["cockpit_all_replies"] });
+        queryClient.invalidateQueries({ queryKey: ["cockpit_queue"] });
+        queryClient.invalidateQueries({ queryKey: ["cockpit_drafts", selectedId] });
+        queryClient.invalidateQueries({ queryKey: ["cockpit_reply", selectedId] });
+      }, 5000);
+      // Stop polling after 3 minutes
+      setTimeout(() => clearInterval(pollInterval), 180000);
+    },
+    onError: (err) => {
+      toast({ title: "Review failed", description: String(err), variant: "destructive" });
+    },
+  });
+
   return {
     // State
     selectedId,
@@ -528,5 +568,6 @@ export function useCockpitData() {
     saveDraftMutation,
     retrySendMutation,
     retryAllFailedMutation,
+    reviewAllHotMutation,
   };
 }

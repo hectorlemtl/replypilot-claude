@@ -224,6 +224,8 @@ export type Database = {
           sentiment: string | null
           simple_affirmative: boolean | null
           status: Database["public"]["Enums"]["reply_status"]
+          review_iterations: number
+          review_status: string | null
           temperature: Database["public"]["Enums"]["reply_temperature"] | null
           updated_at: string
           wants_pdf: boolean | null
@@ -250,6 +252,8 @@ export type Database = {
           sentiment?: string | null
           simple_affirmative?: boolean | null
           status?: Database["public"]["Enums"]["reply_status"]
+          review_iterations?: number
+          review_status?: string | null
           temperature?: Database["public"]["Enums"]["reply_temperature"] | null
           updated_at?: string
           wants_pdf?: boolean | null
@@ -275,6 +279,8 @@ export type Database = {
           sender_name?: string | null
           sentiment?: string | null
           simple_affirmative?: boolean | null
+          review_iterations?: number
+          review_status?: string | null
           status?: Database["public"]["Enums"]["reply_status"]
           temperature?: Database["public"]["Enums"]["reply_temperature"] | null
           updated_at?: string

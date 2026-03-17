@@ -99,6 +99,15 @@ export const ReplyQueue = forwardRef<HTMLInputElement, ReplyQueueProps>(
                         1st
                       </span>
                     )}
+                    {reply.review_status === "reviewing" && (
+                      <span className="text-[9px] text-violet-600 font-medium animate-pulse">reviewing...</span>
+                    )}
+                    {reply.review_status === "reviewed" && (
+                      <span className="text-[9px] text-green-600 font-medium">R{reply.review_iterations}</span>
+                    )}
+                    {reply.review_status === "needs_human" && (
+                      <span className="text-[9px] text-amber-600 font-medium">R{reply.review_iterations}</span>
+                    )}
                     <span className={cn(
                       "text-[9px] ml-auto",
                       isHot ? "text-destructive font-medium" : "text-muted-foreground"

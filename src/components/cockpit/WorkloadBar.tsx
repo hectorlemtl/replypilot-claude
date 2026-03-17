@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { QueueFilter } from "@/hooks/useCockpitData";
-import { Flame, Zap, AlertTriangle, Eye, Keyboard, Send, Archive, List, RotateCcw } from "lucide-react";
+import { Flame, Zap, AlertTriangle, Eye, Keyboard, Send, Archive, List, RotateCcw, Sparkles } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { SHORTCUTS } from "@/hooks/useKeyboardShortcuts";
 import { useState } from "react";
@@ -11,6 +11,8 @@ interface WorkloadBarProps {
   onFilterChange: (f: QueueFilter) => void;
   onRetryAllFailed?: () => void;
   isRetryingAll?: boolean;
+  onReviewAllHot?: () => void;
+  isReviewingAll?: boolean;
 }
 
 type FilterGroup = "action" | "browse";
@@ -26,7 +28,7 @@ const FILTERS: { key: QueueFilter; label: string; icon: typeof Flame; urgent?: b
   { key: "archived", label: "Archived", icon: Archive, group: "browse" },
 ];
 
-export function WorkloadBar({ counts, activeFilter, onFilterChange, onRetryAllFailed, isRetryingAll }: WorkloadBarProps) {
+export function WorkloadBar({ counts, activeFilter, onFilterChange, onRetryAllFailed, isRetryingAll, onReviewAllHot, isReviewingAll }: WorkloadBarProps) {
   const [showShortcuts, setShowShortcuts] = useState(false);
 
   const actionFilters = FILTERS.filter(f => f.group === "action");
@@ -75,6 +77,21 @@ export function WorkloadBar({ counts, activeFilter, onFilterChange, onRetryAllFa
       {browseFilters.map(renderFilter)}
 
       <div className="ml-auto flex items-center gap-1">
+        {activeFilter === "hot_review" && counts.hot_review > 0 && onReviewAllHot && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={onReviewAllHot}
+                disabled={isReviewingAll}
+                className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-violet-600 hover:bg-violet-50 transition-colors disabled:opacity-50"
+              >
+                <Sparkles className={cn("w-3 h-3", isReviewingAll && "animate-pulse")} />
+                {isReviewingAll ? "Reviewing..." : `Review all (${counts.hot_review})`}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>AI review &amp; optimize all hot drafts (up to 4 iterations each)</TooltipContent>
+          </Tooltip>
+        )}
         {activeFilter === "failed" && counts.failed > 0 && onRetryAllFailed && (
           <button
             onClick={onRetryAllFailed}
