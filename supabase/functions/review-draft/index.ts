@@ -75,6 +75,7 @@ All facts must match Zeffy's verified information and KB articles:
 - No invented features or capabilities
 - Links must be real Zeffy URLs from the KB articles or verified list
 - If the draft mentions something not in the KB articles or verified facts, it FAILS.
+- If the draft contains placeholder text like "[deck link]", "[deck_link]", "{deck_link}", "{{deck_link}}", or any bracketed variable instead of an actual URL → FAIL immediately. All links must be real, complete URLs.
 
 ### 4. RELEVANCE
 - The draft MUST answer questions the lead actually asked
@@ -320,8 +321,10 @@ Previous draft: {{previous_draft}}
 
 Feedback to incorporate: {{feedback}}
 
-Deck link (include only if appropriate): {{deck_link}}
+COMPARISON DECK URL (use this exact URL when including the deck): {{deck_link}}
 Calendar link: {{calendar_link}}
+
+CRITICAL: When the draft should include the comparison deck, you MUST use the exact URL above ({{deck_link}}). NEVER write "[deck link]", "[deck_link]", "{deck_link}", or any placeholder. Always use the full URL directly in the email text.
 
 Revise the draft to address the feedback while keeping Julia's warm, concise voice. Match reply length to the lead's message. 4-7 sentences max.`;
 
