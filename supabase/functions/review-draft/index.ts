@@ -47,6 +47,7 @@ const REVIEW_USER_PROMPT = `Review this email draft against 6 criteria, then cla
 - Mode: {{mode}} (first-reply or follow-up)
 - Deck already shared: {{deck_already_shared}}
 - Thread length: {{thread_length}} messages
+- Comparison deck URL: {{deck_link}}
 
 ---
 
@@ -92,10 +93,21 @@ All facts must match Zeffy's verified information and KB articles:
 - Must NOT contradict anything from thread history
 - If this is a first reply, this criterion auto-passes
 
-### 6. DECK SHARING LANGUAGE
-- If this is a FIRST REPLY (mode=first-reply) and the deck has NOT been shared yet (deck_already_shared=false), the draft must NOT say "I've shared" or "as I shared" or "I've already sent" — use present tense: "Here is your..." or "Here's a comparison deck..."
-- If the deck WAS already shared (deck_already_shared=true), do NOT re-share it unless the lead is forwarding to someone new (sharing override)
-- Wrong tense on deck sharing is a FAIL
+### 6. DECK PRESENCE & LANGUAGE (CRITICAL)
+This is the most important criterion. The comparison deck is the core deliverable of this campaign.
+
+**For FIRST REPLIES (mode=first-reply):**
+- The draft MUST contain the actual comparison deck URL ({{deck_link}}) — not a promise to send it later, not a placeholder, not "I'd be happy to send..."
+- The deck URL must be a real, complete URL (starts with https://). If it contains "[deck link]", "[link]", "{deck}", or any bracketed placeholder → FAIL
+- If the draft says "I'll send over", "I'd be happy to share", "I can send", "Let me send" instead of actually including the URL right now → FAIL. The deck must be IN the email, not promised for later.
+- The only exceptions where deck is NOT required: (a) lead explicitly asked NOT to receive materials, (b) lead asked about a non-PayPal platform AND the draft includes the correct comparison page URL instead
+- Use present tense: "Here is your comparison deck:" or "Here's a breakdown:" — NOT past tense "I've shared" or "as I sent"
+
+**For FOLLOW-UPS (mode=follow-up):**
+- If deck_already_shared=true, do NOT re-share unless the lead is forwarding to someone new (sharing override)
+- If deck_already_shared=false AND the lead is requesting comparison info, include the deck URL
+
+**If deck URL is missing on a first reply, this is an automatic FAIL.** Your feedback MUST say: "MISSING DECK: Include the comparison deck URL in the email: {{deck_link}}"
 
 ---
 
@@ -162,6 +174,16 @@ serve(async (req) => {
       }
     }
 
+    // Get deck link (campaign-specific or default)
+    const { data: settings } = await supabase.from("app_settings").select("*").single();
+    let campaignDeck = settings?.default_deck_link || "";
+    let campaignCalendar = settings?.default_calendar_link || "";
+    if (reply.campaign_id) {
+      const { data: campaign } = await supabase.from("campaigns").select("*").eq("id", reply.campaign_id).single();
+      if (campaign?.deck_link) campaignDeck = campaign.deck_link;
+      if (campaign?.calendar_link) campaignCalendar = campaign.calendar_link;
+    }
+
     // KB search for fact-checking context
     let kbContext = "";
     try {
@@ -195,7 +217,8 @@ serve(async (req) => {
         .replace(/\{\{kb_articles\}\}/g, kbContext || "No KB articles found.")
         .replace(/\{\{mode\}\}/g, mode)
         .replace(/\{\{deck_already_shared\}\}/g, String(threadContext.deckAlreadyShared))
-        .replace(/\{\{thread_length\}\}/g, String(threadContext.threadLength));
+        .replace(/\{\{thread_length\}\}/g, String(threadContext.threadLength))
+        .replace(/\{\{deck_link\}\}/g, campaignDeck);
 
       // Call Claude to review
       const reviewResult = await callAnthropic({
@@ -268,20 +291,13 @@ serve(async (req) => {
         // Call regenerate-draft directly (inline, not via HTTP) to avoid version cap issues
         const nextVersion = latestDraft.version_number + 1;
 
-        // Get settings for links
-        const { data: settings } = await supabase.from("app_settings").select("*").single();
-        let campaignCalendar = settings?.default_calendar_link || "";
-        let campaignDeck = settings?.default_deck_link || "";
-        if (reply.campaign_id) {
-          const { data: campaign } = await supabase.from("campaigns").select("*").eq("id", reply.campaign_id).single();
-          if (campaign?.calendar_link) campaignCalendar = campaign.calendar_link;
-          if (campaign?.deck_link) campaignDeck = campaign.deck_link;
-        }
-
         // Build mode guidance
         let modeGuidance = "";
         if (mode === "first-reply") {
-          modeGuidance = `This is a FIRST REPLY. Include comparison deck if appropriate. Match reply length to lead's message.`;
+          modeGuidance = `This is a FIRST REPLY. You MUST include the comparison deck URL in the email body. The URL is: ${campaignDeck}
+Use present tense: "Here is your PayPal vs Zeffy comparison deck:" followed by the URL.
+Do NOT promise to send it later. Do NOT use placeholders. The URL must appear in your output.
+Match reply length to lead's message.`;
         } else {
           modeGuidance = `This is a FOLLOW-UP. Deck already shared: ${threadContext.deckAlreadyShared}. Do NOT repeat info already shared.\n\nThread history:\n${threadContext.formatted}`;
         }
