@@ -8,6 +8,7 @@ import { CockpitLayout } from "@/components/cockpit/CockpitLayout";
 import { UntrackedLayout } from "@/components/untracked/UntrackedLayout";
 import SettingsPage from "@/pages/SettingsPage";
 import AnalyticsPage from "@/pages/AnalyticsPage";
+import ExplorePage from "@/pages/ExplorePage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
             <Route path="/untracked" element={<UntrackedLayout />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
+            <Route path="/explore" element={<ExplorePage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

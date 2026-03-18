@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.send-slack-digest]
 verify_jwt = false
+
+[functions.sync-unified-replies]
+verify_jwt = false

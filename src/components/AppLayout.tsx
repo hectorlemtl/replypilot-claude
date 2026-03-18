@@ -1,17 +1,18 @@
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { BarChart3, Inbox, Settings, Zap } from "lucide-react";
+import { BarChart3, Inbox, Search, Settings, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { to: "/", icon: Zap, label: "Cockpit" },
   { to: "/untracked", icon: Inbox, label: "Untracked" },
   { to: "/analytics", icon: BarChart3, label: "Analytics" },
+  { to: "/explore", icon: Search, label: "Explore" },
   { to: "/settings", icon: Settings, label: "Settings" },
 ];
 
 export function AppLayout() {
   const location = useLocation();
-  const isCockpit = location.pathname === "/";
+  const isFullHeight = location.pathname === "/" || location.pathname === "/explore";
 
   return (
     <div className="h-screen bg-background flex flex-col">
@@ -46,7 +47,7 @@ export function AppLayout() {
       </header>
 
       {/* Main content - full height for cockpit */}
-      <main className={cn("flex-1 overflow-hidden", !isCockpit && "overflow-auto")}>
+      <main className={cn("flex-1 overflow-hidden", !isFullHeight && "overflow-auto")}>
         <Outlet />
       </main>
     </div>
