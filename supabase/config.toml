@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.sync-unified-replies]
 verify_jwt = false
+
+[functions.tag-themes]
+verify_jwt = false
