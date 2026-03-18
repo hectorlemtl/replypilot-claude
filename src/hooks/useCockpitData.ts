@@ -487,6 +487,64 @@ export function useCockpitData() {
     },
   });
 
+  // Count auto-sendable replies
+  const autoSendableCount = useMemo(() => {
+    if (!allReplies) return 0;
+    return allReplies.filter(r => !r.archived_at && (r as any).review_status === "auto_sendable" && ["awaiting_review", "regenerated"].includes(r.status)).length;
+  }, [allReplies]);
+
+  // Send all auto-sendable drafts
+  const sendAllAutoMutation = useMutation({
+    mutationFn: async () => {
+      const { data: autoReplies, error } = await supabase
+        .from("inbound_replies")
+        .select("id")
+        .eq("review_status", "auto_sendable" as any)
+        .in("status", ["awaiting_review", "regenerated"] as any)
+        .is("archived_at", null);
+      if (error) throw error;
+      if (!autoReplies?.length) return { count: 0 };
+
+      for (const reply of autoReplies) {
+        // Get latest draft
+        const { data: draft } = await supabase
+          .from("draft_versions")
+          .select("id")
+          .eq("reply_id", reply.id)
+          .order("version_number", { ascending: false })
+          .limit(1)
+          .single();
+
+        if (draft) {
+          // Approve
+          await supabase.from("approval_actions").insert({
+            reply_id: reply.id,
+            draft_version_id: draft.id,
+            action: "approved",
+            acted_by: "auto_review",
+          });
+          await supabase.from("inbound_replies").update({ status: "approved" }).eq("id", reply.id);
+
+          // Send
+          await supabase.functions.invoke("send-reply", {
+            body: { reply_id: reply.id, draft_version_id: draft.id },
+          });
+        }
+      }
+      return { count: autoReplies.length };
+    },
+    onSuccess: (data) => {
+      toast({ title: `Sending ${data?.count || 0} auto-approved drafts...` });
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["cockpit_all_replies"] });
+        queryClient.invalidateQueries({ queryKey: ["cockpit_queue"] });
+      }, 3000);
+    },
+    onError: (err) => {
+      toast({ title: "Auto-send failed", description: String(err), variant: "destructive" });
+    },
+  });
+
   // Review all hot drafts
   const reviewAllHotMutation = useMutation({
     mutationFn: async () => {
@@ -575,5 +633,7 @@ export function useCockpitData() {
     retrySendMutation,
     retryAllFailedMutation,
     reviewAllHotMutation,
+    sendAllAutoMutation,
+    autoSendableCount,
   };
 }

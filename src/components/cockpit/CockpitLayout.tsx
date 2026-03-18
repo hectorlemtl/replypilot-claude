@@ -66,6 +66,9 @@ export function CockpitLayout() {
         isRetryingAll={data.retryAllFailedMutation.isPending}
         onReviewAllHot={() => data.reviewAllHotMutation.mutate()}
         isReviewingAll={data.reviewAllHotMutation.isPending}
+        onSendAllAuto={() => data.sendAllAutoMutation.mutate()}
+        isSendingAllAuto={data.sendAllAutoMutation.isPending}
+        autoSendableCount={data.autoSendableCount}
       />
 
       <ResizablePanelGroup direction="horizontal" className="flex-1">

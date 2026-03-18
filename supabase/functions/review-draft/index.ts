@@ -113,21 +113,30 @@ This is the most important criterion. The comparison deck is the core deliverabl
 
 ## COMPLEXITY CLASSIFICATION
 
-After reviewing, classify the reply complexity:
+After reviewing, classify the reply into one of THREE tiers:
 
-**SIMPLE** — The reply is straightforward and can be approved quickly. Examples:
-- Lead said "yes/sure/send it" → just deliver the deck + brief acknowledgment
-- Lead is forwarding to someone else → thank them + include deck for the new person
-- Lead said "thanks" or acknowledged receipt → brief "we're here if you need anything"
-- No specific questions asked, no objections to handle
-- The answer is obvious and doesn't require domain expertise
+**AUTO_SENDABLE** — The reply is so straightforward it can be sent without any human review. ALL of these must be true:
+- The lead's message is a simple acknowledgment with NO questions (e.g., "yes", "sure", "send it over", "I'll forward this", "thanks", "I'll pass this along to our treasurer")
+- The draft is a brief acknowledgment (2-4 sentences) + deck link (if first reply) + "let me know if you have questions"
+- No specific questions to answer, no objections, no ambiguity
+- The draft contains no claims that need fact-checking (no specific numbers, no feature descriptions beyond "100% free")
+- The lead is not asking for a call, demo, or specific information
+- Examples: "Sure, send it" → deck + thanks. "I'll forward to our treasurer" → thanks + deck for sharing. "Thanks for the info" → brief acknowledgment.
 
-**COMPLEX** — The reply needs human review. Examples:
-- Lead asked specific questions about features, pricing, or migration
-- Lead raised objections or concerns
-- Lead's situation requires nuanced response (multiple decision-makers, specific use case)
-- The draft references specific KB articles or technical details
+**SIMPLE** — Quick human glance needed but no deep thinking required. Examples:
+- Lead asked a basic question that the draft answers correctly (e.g., "how is it free?")
+- Lead is forwarding AND asking a simple question
+- The draft includes a KB link or specific feature mention that needs a quick accuracy check
+- Lead expressed mild skepticism ("sounds too good to be true") but the draft handles it well
+
+**COMPLEX** — Needs careful human review. Examples:
+- Lead asked specific technical questions about features, migration, or integrations
+- Lead raised objections or concerns that require nuanced handling
+- Lead's situation involves multiple decision-makers with different needs
+- Lead asked about a non-PayPal platform comparison
+- Lead mentioned specific use cases (events, raffles, memberships) that need accurate answers
 - Any ambiguity about what the lead is asking
+- The draft makes claims that could be wrong
 
 ---
 
@@ -233,7 +242,7 @@ serve(async (req) => {
             type: "object",
             properties: {
               verdict: { type: "string", enum: ["pass", "fail"], description: "Overall review verdict" },
-              complexity: { type: "string", enum: ["simple", "complex"], description: "Reply complexity: simple (ready to send quickly) or complex (needs human review)" },
+              complexity: { type: "string", enum: ["auto_sendable", "simple", "complex"], description: "Reply complexity: auto_sendable (can be sent without review), simple (quick glance), or complex (needs careful review)" },
               length_score: { type: "string", enum: ["pass", "fail"], description: "Length criterion result" },
               tone_score: { type: "string", enum: ["pass", "fail"], description: "Tone criterion result" },
               accuracy_score: { type: "string", enum: ["pass", "fail"], description: "Accuracy criterion result" },
@@ -400,8 +409,10 @@ Revise the draft to address the feedback while keeping Julia's warm, concise voi
     }
 
     // Final status update
-    const reviewStatus = finalVerdict === "pass" ? "reviewed" : "needs_human";
-    const isSimple = finalVerdict === "pass" && lastReviewResult?.complexity === "simple";
+    const complexity = lastReviewResult?.complexity || "complex";
+    const reviewStatus = finalVerdict === "pass"
+      ? (complexity === "auto_sendable" ? "auto_sendable" : "reviewed")
+      : "needs_human";
 
     const updatePayload: Record<string, any> = {
       review_status: reviewStatus,
@@ -409,8 +420,8 @@ Revise the draft to address the feedback while keeping Julia's warm, concise voi
       status: "awaiting_review",
     };
 
-    // Reclassify as simple if the reviewer flagged it — moves to Simple tab for fast approval
-    if (isSimple) {
+    // Reclassify temperature based on complexity
+    if (finalVerdict === "pass" && (complexity === "simple" || complexity === "auto_sendable")) {
       updatePayload.temperature = "simple";
     }
 

@@ -129,6 +129,11 @@ export function DraftPanel({
                 reviewing...
               </span>
             )}
+            {reply.review_status === "auto_sendable" && (
+              <span className="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-medium">
+                AUTO R{reply.review_iterations}
+              </span>
+            )}
             {reply.review_status === "reviewed" && (
               <span className="text-[10px] text-green-600 bg-green-50 px-1.5 py-0.5 rounded font-medium">
                 R{reply.review_iterations}

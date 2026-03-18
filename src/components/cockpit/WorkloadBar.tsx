@@ -13,6 +13,9 @@ interface WorkloadBarProps {
   isRetryingAll?: boolean;
   onReviewAllHot?: () => void;
   isReviewingAll?: boolean;
+  onSendAllAuto?: () => void;
+  isSendingAllAuto?: boolean;
+  autoSendableCount?: number;
 }
 
 type FilterGroup = "action" | "browse";
@@ -28,7 +31,7 @@ const FILTERS: { key: QueueFilter; label: string; icon: typeof Flame; urgent?: b
   { key: "archived", label: "Archived", icon: Archive, group: "browse" },
 ];
 
-export function WorkloadBar({ counts, activeFilter, onFilterChange, onRetryAllFailed, isRetryingAll, onReviewAllHot, isReviewingAll }: WorkloadBarProps) {
+export function WorkloadBar({ counts, activeFilter, onFilterChange, onRetryAllFailed, isRetryingAll, onReviewAllHot, isReviewingAll, onSendAllAuto, isSendingAllAuto, autoSendableCount }: WorkloadBarProps) {
   const [showShortcuts, setShowShortcuts] = useState(false);
 
   const actionFilters = FILTERS.filter(f => f.group === "action");
@@ -90,6 +93,21 @@ export function WorkloadBar({ counts, activeFilter, onFilterChange, onRetryAllFa
               </button>
             </TooltipTrigger>
             <TooltipContent>AI review &amp; optimize all hot drafts (up to 4 iterations each)</TooltipContent>
+          </Tooltip>
+        )}
+        {activeFilter === "simple_review" && (autoSendableCount || 0) > 0 && onSendAllAuto && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={onSendAllAuto}
+                disabled={isSendingAllAuto}
+                className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-emerald-700 hover:bg-emerald-50 transition-colors disabled:opacity-50"
+              >
+                <Send className={cn("w-3 h-3", isSendingAllAuto && "animate-pulse")} />
+                {isSendingAllAuto ? "Sending..." : `Send all auto (${autoSendableCount})`}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>Approve &amp; send all AI-verified auto-sendable drafts</TooltipContent>
           </Tooltip>
         )}
         {activeFilter === "failed" && counts.failed > 0 && onRetryAllFailed && (

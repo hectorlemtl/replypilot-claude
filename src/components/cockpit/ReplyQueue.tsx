@@ -102,6 +102,9 @@ export const ReplyQueue = forwardRef<HTMLInputElement, ReplyQueueProps>(
                     {reply.review_status === "reviewing" && (
                       <span className="text-[9px] text-violet-600 font-medium animate-pulse">reviewing...</span>
                     )}
+                    {reply.review_status === "auto_sendable" && (
+                      <span className="text-[9px] text-emerald-700 font-medium">AUTO</span>
+                    )}
                     {reply.review_status === "reviewed" && (
                       <span className="text-[9px] text-green-600 font-medium">R{reply.review_iterations}</span>
                     )}
