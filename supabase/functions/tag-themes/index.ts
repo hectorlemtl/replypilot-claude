@@ -82,8 +82,9 @@ Output JSON only: {"primary_theme": "string", "themes": ["string", ...], "confid
       });
 
       if (!res.ok) {
-        console.error(`Anthropic error ${res.status} for ${reply.id}`);
-        results.push({ id: reply.id, error: `API ${res.status}` });
+        const errBody = await res.text();
+        console.error(`Anthropic error ${res.status} for ${reply.id}: ${errBody}`);
+        results.push({ id: reply.id, error: `API ${res.status}: ${errBody.slice(0, 200)}` });
         continue;
       }
 
@@ -123,16 +124,24 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const batchSize = body.batch_size || 15; // Keep small to avoid timeout
 
-    // Fetch replies without themes
+    // Fetch replies without themes (with actual text content)
     const { data: replies, error } = await supabase
       .from("unified_replies")
       .select("id, reply_text, reply_subject, temperature")
       .is("themes_generated_at", null)
       .not("reply_text", "is", null)
+      .neq("reply_text", "")
       .limit(batchSize);
 
     if (error) throw error;
     if (!replies || replies.length === 0) {
+      // Mark empty-text replies as done so they don't remain as "remaining"
+      await supabase
+        .from("unified_replies")
+        .update({ themes_generated_at: new Date().toISOString(), themes: [], primary_theme: null })
+        .is("themes_generated_at", null)
+        .or("reply_text.is.null,reply_text.eq.");
+
       return new Response(JSON.stringify({ message: "No replies to tag", total_remaining: 0 }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -177,9 +186,11 @@ serve(async (req) => {
 
     const duration = Date.now() - start;
 
+    const errorDetails = results.filter(r => r.error).map(r => r.error);
     return new Response(JSON.stringify({
       tagged, errors, remaining, duration_ms: duration,
       batch_size: replies.length,
+      error_details: errorDetails.slice(0, 3),
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
