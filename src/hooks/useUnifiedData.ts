@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 // ─── Types ────────────────────────────────────────────────
@@ -272,7 +272,7 @@ export function useExplorerReplies(filters: ExplorerFilters) {
       if (error) throw error;
       return { replies: (data || []) as UnifiedReply[], total: count || 0 };
     },
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
   });
 }
 

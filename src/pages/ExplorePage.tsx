@@ -5,10 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, X, ChevronDown, ExternalLink, Copy, Mail } from "lucide-react";
+import { Search, X, Copy, Mail } from "lucide-react";
 import { useExplorerReplies, useThemeCounts, useCampaignList, type ExplorerFilters, type UnifiedReply } from "@/hooks/useUnifiedData";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
@@ -131,7 +130,7 @@ export default function ExplorePage() {
   const total = data?.total || 0;
 
   return (
-    <div className="h-[calc(100vh-64px)] flex">
+    <div className="h-[calc(100vh-40px)] flex">
       {/* Left Panel — Filters & Themes */}
       <div className="w-72 border-r flex flex-col bg-background">
         {/* Search */}

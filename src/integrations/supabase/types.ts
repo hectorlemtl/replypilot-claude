@@ -386,9 +386,263 @@ export type Database = {
           },
         ]
       }
+      sync_metadata: {
+        Row: {
+          id: string
+          last_sync_at: string | null
+          last_sync_result: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          last_sync_at?: string | null
+          last_sync_result?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          last_sync_at?: string | null
+          last_sync_result?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      unified_replies: {
+        Row: {
+          id: string
+          dedup_key: string
+          source_system: string
+          instantly_email_id: string | null
+          smartlead_message_id: string | null
+          replypilot_reply_id: string | null
+          instantly_sync_id: string | null
+          lead_email: string
+          lead_name: string | null
+          sender_email: string | null
+          sender_name: string | null
+          reply_subject: string | null
+          reply_text: string | null
+          reply_html: string | null
+          campaign_id: string | null
+          campaign_name: string | null
+          sequence_step: number | null
+          thread_id: string | null
+          company_name: string | null
+          company_domain: string | null
+          ein: string | null
+          org_state: string | null
+          org_city: string | null
+          org_total_emails_sent: number | null
+          org_total_replies: number | null
+          org_total_positive: number | null
+          temperature: string | null
+          reasoning: string | null
+          confidence: number | null
+          classification_source: string | null
+          rp_status: string | null
+          rp_draft_count: number | null
+          rp_sent_at: string | null
+          is_first_reply: boolean
+          wants_pdf: boolean
+          simple_affirmative: boolean
+          original_reply_category: string | null
+          original_interest_status: string | null
+          original_ai_interest_value: string | null
+          themes: string[] | null
+          primary_theme: string | null
+          theme_confidence: number | null
+          themes_generated_at: string | null
+          received_at: string
+          created_at: string | null
+          updated_at: string | null
+          synced_at: string | null
+        }
+        Insert: {
+          id?: string
+          dedup_key: string
+          source_system?: string
+          instantly_email_id?: string | null
+          smartlead_message_id?: string | null
+          replypilot_reply_id?: string | null
+          instantly_sync_id?: string | null
+          lead_email: string
+          lead_name?: string | null
+          sender_email?: string | null
+          sender_name?: string | null
+          reply_subject?: string | null
+          reply_text?: string | null
+          reply_html?: string | null
+          campaign_id?: string | null
+          campaign_name?: string | null
+          sequence_step?: number | null
+          thread_id?: string | null
+          company_name?: string | null
+          company_domain?: string | null
+          ein?: string | null
+          org_state?: string | null
+          org_city?: string | null
+          org_total_emails_sent?: number | null
+          org_total_replies?: number | null
+          org_total_positive?: number | null
+          temperature?: string | null
+          reasoning?: string | null
+          confidence?: number | null
+          classification_source?: string | null
+          rp_status?: string | null
+          rp_draft_count?: number | null
+          rp_sent_at?: string | null
+          is_first_reply?: boolean
+          wants_pdf?: boolean
+          simple_affirmative?: boolean
+          original_reply_category?: string | null
+          original_interest_status?: string | null
+          original_ai_interest_value?: string | null
+          themes?: string[] | null
+          primary_theme?: string | null
+          theme_confidence?: number | null
+          themes_generated_at?: string | null
+          received_at: string
+          created_at?: string | null
+          updated_at?: string | null
+          synced_at?: string | null
+        }
+        Update: {
+          id?: string
+          dedup_key?: string
+          source_system?: string
+          instantly_email_id?: string | null
+          smartlead_message_id?: string | null
+          replypilot_reply_id?: string | null
+          instantly_sync_id?: string | null
+          lead_email?: string
+          lead_name?: string | null
+          sender_email?: string | null
+          sender_name?: string | null
+          reply_subject?: string | null
+          reply_text?: string | null
+          reply_html?: string | null
+          campaign_id?: string | null
+          campaign_name?: string | null
+          sequence_step?: number | null
+          thread_id?: string | null
+          company_name?: string | null
+          company_domain?: string | null
+          ein?: string | null
+          org_state?: string | null
+          org_city?: string | null
+          org_total_emails_sent?: number | null
+          org_total_replies?: number | null
+          org_total_positive?: number | null
+          temperature?: string | null
+          reasoning?: string | null
+          confidence?: number | null
+          classification_source?: string | null
+          rp_status?: string | null
+          rp_draft_count?: number | null
+          rp_sent_at?: string | null
+          is_first_reply?: boolean
+          wants_pdf?: boolean
+          simple_affirmative?: boolean
+          original_reply_category?: string | null
+          original_interest_status?: string | null
+          original_ai_interest_value?: string | null
+          themes?: string[] | null
+          primary_theme?: string | null
+          theme_confidence?: number | null
+          themes_generated_at?: string | null
+          received_at?: string
+          created_at?: string | null
+          updated_at?: string | null
+          synced_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      v_campaign_funnel: {
+        Row: {
+          campaign_name: string | null
+          total_replies: number
+          hot_replies: number
+          warm_replies: number
+          simple_replies: number
+          cold_replies: number
+          for_later_replies: number
+          ooo_replies: number
+          positive_replies: number
+          responses_sent: number
+          first_reply_at: string | null
+          last_reply_at: string | null
+        }
+        Relationships: []
+      }
+      v_daily_replies: {
+        Row: {
+          reply_date: string
+          campaign_name: string | null
+          total: number
+          hot: number
+          warm: number
+          simple: number
+          cold: number
+          for_later: number
+          ooo: number
+          positive: number
+        }
+        Relationships: []
+      }
+      v_org_engagement: {
+        Row: {
+          company_name: string | null
+          company_domain: string | null
+          ein: string | null
+          org_state: string | null
+          org_city: string | null
+          org_total_emails_sent: number | null
+          reply_count: number
+          positive_reply_count: number
+          last_reply_at: string | null
+          temperatures_seen: string[] | null
+        }
+        Relationships: []
+      }
+      v_weekly_cohort: {
+        Row: {
+          reply_week: string
+          total_replies: number
+          positive_replies: number
+          positive_rate_pct: number | null
+          unique_leads: number
+          unique_orgs: number
+        }
+        Relationships: []
+      }
+      v_classification_quality: {
+        Row: {
+          classification_source: string | null
+          temperature: string | null
+          count: number
+          avg_confidence: number | null
+        }
+        Relationships: []
+      }
+      v_theme_distribution: {
+        Row: {
+          theme: string
+          reply_count: number
+          positive_count: number
+          positive_rate_pct: number | null
+        }
+        Relationships: []
+      }
+      v_primary_theme_breakdown: {
+        Row: {
+          primary_theme: string | null
+          temperature: string | null
+          count: number
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
