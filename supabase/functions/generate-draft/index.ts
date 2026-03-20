@@ -163,23 +163,72 @@ Using originalEmail and emailAnalysis, choose ONE category:
 Before including any comparison link, analyze the originalEmail to determine if the lead mentions using a platform OTHER than PayPal.
 
 **Known comparison pages (use ONLY these exact URLs):**
+
+Payment platforms:
+- PayPal → https://www.zeffy.com/compare/zeffy-vs-paypal
 - Stripe → https://www.zeffy.com/compare/zeffy-vs-stripe
-- Squarespace → https://www.zeffy.com/compare/zeffy-vs-squarespace
-- Eventbrite → https://www.zeffy.com/compare/zeffy-vs-eventbrite
+- Square → https://www.zeffy.com/compare/zeffy-vs-square
 - Venmo → https://www.zeffy.com/compare/zeffy-vs-venmo
+
+Fundraising platforms:
 - GoFundMe → https://www.zeffy.com/compare/zeffy-vs-gofundme
 - Donorbox → https://www.zeffy.com/compare/zeffy-vs-donorbox
-- Square → https://www.zeffy.com/compare/zeffy-vs-square
 - Bloomerang → https://www.zeffy.com/compare/zeffy-vs-bloomerang
+- Classy / GoFundMe Pro → https://www.zeffy.com/compare/zeffy-vs-classy-gofundme-pro
+- Network for Good → https://www.zeffy.com/compare/zeffy-vs-network-for-good
+- DonorPerfect → https://www.zeffy.com/compare/zeffy-vs-donorperfect
+- Fundly → https://www.zeffy.com/compare/zeffy-vs-fundly
+- Kickstarter → https://www.zeffy.com/compare/zeffy-vs-kickstarter
+- Indiegogo → https://www.zeffy.com/compare/zeffy-vs-indiegogo
+- Qgiv → https://www.zeffy.com/compare/zeffy-vs-qgiv
+- MightyCause → https://www.zeffy.com/compare/zeffy-vs-mightycause
+- Flipcause → https://www.zeffy.com/compare/zeffy-vs-flipcause
+- BetterWorld → https://www.zeffy.com/compare/zeffy-vs-betterworld
+- Bonfire → https://www.zeffy.com/compare/zeffy-vs-bonfire
+- Charidy → https://www.zeffy.com/compare/zeffy-vs-charidy
+- RallyUp → https://www.zeffy.com/compare/zeffy-vs-rallyup
+- Snap! Raise → https://www.zeffy.com/compare/zeffy-vs-snap-raise
+- DonateStock → https://www.zeffy.com/compare/zeffy-vs-donatestock
+- Gively → https://www.zeffy.com/compare/zeffy-vs-gively
+- CanadaHelps → https://www.zeffy.com/compare/zeffy-vs-canadahelps
+
+Event & ticketing platforms:
+- Eventbrite → https://www.zeffy.com/compare/zeffy-vs-eventbrite
+- BookitBee → https://www.zeffy.com/compare/zeffy-vs-bookitbee
+- Sched → https://www.zeffy.com/compare/zeffy-vs-sched
+- Skiddle → https://www.zeffy.com/compare/zeffy-vs-skiddle
+- Tickera → https://www.zeffy.com/compare/zeffy-vs-tickera
+- Vivenu → https://www.zeffy.com/compare/zeffy-vs-vivenu
+- Weezevent → https://www.zeffy.com/compare/zeffy-vs-weezevent
+- Yapsody → https://www.zeffy.com/compare/zeffy-vs-yapsody
+- SweepWidget → https://www.zeffy.com/compare/zeffy-vs-sweepwidget
+- Tiing → https://www.zeffy.com/compare/zeffy-vs-tiing
+
+Membership & website:
 - Wild Apricot → https://www.zeffy.com/compare/zeffy-vs-wildapricot
+- Squarespace → https://www.zeffy.com/compare/zeffy-vs-squarespace
+- JotForm → https://www.zeffy.com/compare/zeffy-vs-jotform
+- Google Forms → https://www.zeffy.com/compare/zeffy-vs-google-forms
+
+Auction platforms:
+- Auctria → https://www.zeffy.com/compare/zeffy-vs-auctria
+- HandBid → refer to general compare page (no dedicated page)
+- RaiseRight → https://www.zeffy.com/compare/zeffy-vs-raiseright
+
+**IMPORTANT: How to detect and use competitor pages:**
+
+1. Scan the originalEmail for ANY mention of a competing platform name (case-insensitive).
+2. Common patterns: "we use [Platform]", "currently on [Platform]", "switching from [Platform]", "compared to [Platform]", "[Platform] fees", "tried [Platform]".
+3. Also detect misspellings and abbreviations: "wild apricot" = Wild Apricot, "NFG" = Network for Good, "DP" = DonorPerfect, "GFM" = GoFundMe.
 
 **If the lead mentions a non-PayPal platform from the list above:**
 - Do NOT send the PayPal vs Zeffy comparison deck ({{deck_link}}).
 - Instead, send the matching comparison page URL from the list above.
-- Frame it as: "Since you mentioned using {Platform}, here's a comparison that shows how Zeffy stacks up: {link}"
+- Frame it as: "Since you mentioned [Platform], here's a comparison that shows how Zeffy stacks up: [link]"
 - This rule applies to BOTH first replies and follow-ups.
 
-**If the lead mentions a platform NOT in the list above** (e.g., Classy, Network for Good, DonorPerfect, etc.), send the general compare page instead: https://www.zeffy.com/home/compare
+**If the lead mentions Givebutter or any platform NOT in the list above**, send the general compare page: https://www.zeffy.com/home/compare
+- Frame it as: "Here's an overview of how Zeffy compares to other platforms: https://www.zeffy.com/home/compare"
 
 **If the lead uses PayPal (default) or no specific platform is mentioned, use the standard deck rules below:**
 
@@ -342,17 +391,18 @@ ONLY include the deck if:
 
 If including: "Here is the PayPal vs Zeffy comparison deck: {{deck_link}}"
 
-**Platform detection still applies** — if the lead mentions a non-PayPal platform, use the matching comparison URL:
-- Stripe: https://www.zeffy.com/compare/zeffy-vs-stripe
-- Squarespace: https://www.zeffy.com/compare/zeffy-vs-squarespace
-- Eventbrite: https://www.zeffy.com/compare/zeffy-vs-eventbrite
-- Venmo: https://www.zeffy.com/compare/zeffy-vs-venmo
-- GoFundMe: https://www.zeffy.com/compare/zeffy-vs-gofundme
-- Donorbox: https://www.zeffy.com/compare/zeffy-vs-donorbox
-- Square: https://www.zeffy.com/compare/zeffy-vs-square
-- Bloomerang: https://www.zeffy.com/compare/zeffy-vs-bloomerang
-- Wild Apricot: https://www.zeffy.com/compare/zeffy-vs-wildapricot
-- Unknown platform: https://www.zeffy.com/home/compare
+**Platform detection still applies** — if the lead mentions a non-PayPal platform, use the matching comparison URL. Refer to the full competitor list from the first-reply prompt (same URLs). Key ones:
+- Stripe: /compare/zeffy-vs-stripe | Square: /compare/zeffy-vs-square | Venmo: /compare/zeffy-vs-venmo
+- Eventbrite: /compare/zeffy-vs-eventbrite | Donorbox: /compare/zeffy-vs-donorbox
+- GoFundMe: /compare/zeffy-vs-gofundme | Bloomerang: /compare/zeffy-vs-bloomerang
+- Classy: /compare/zeffy-vs-classy-gofundme-pro | Network for Good: /compare/zeffy-vs-network-for-good
+- DonorPerfect: /compare/zeffy-vs-donorperfect | Wild Apricot: /compare/zeffy-vs-wildapricot
+- Squarespace: /compare/zeffy-vs-squarespace | Qgiv: /compare/zeffy-vs-qgiv
+- MightyCause: /compare/zeffy-vs-mightycause | Flipcause: /compare/zeffy-vs-flipcause
+- Fundly: /compare/zeffy-vs-fundly | CanadaHelps: /compare/zeffy-vs-canadahelps
+- Auctria: /compare/zeffy-vs-auctria | RallyUp: /compare/zeffy-vs-rallyup
+- All URLs start with https://www.zeffy.com
+- Givebutter or unknown: https://www.zeffy.com/home/compare
 
 ## Step 4 — Knowledge base (for specific questions)
 
