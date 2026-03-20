@@ -42,7 +42,15 @@ export function CockpitLayout() {
       if (canApprove && data.latestDraft) data.approveMutation.mutate({});
     },
     onRegenerate: () => feedbackRef.current?.focus(),
-    onEdit: () => editorRef.current?.focus(),
+    onEdit: () => {
+      // Toggle edit mode — the DraftPanel needs to enter edit mode first, then focus the textarea
+      if (editorRef.current) {
+        editorRef.current.focus();
+      } else if (data.latestDraft && data.selectedReply) {
+        // Dispatch a custom event that DraftPanel listens to
+        window.dispatchEvent(new CustomEvent("replypilot:start-edit"));
+      }
+    },
     onManual: () => {
       if (data.selectedReply) data.markManualMutation.mutate();
     },
@@ -53,6 +61,7 @@ export function CockpitLayout() {
     onSubmit: handleSubmit,
     onEscape: () => {
       (document.activeElement as HTMLElement)?.blur();
+      window.dispatchEvent(new CustomEvent("replypilot:cancel-edit"));
     },
   });
 
