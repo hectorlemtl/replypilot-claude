@@ -78,25 +78,6 @@ export function DraftPanel({
     }
   }, [latestDraft?.id, previousDraft?.id]);
 
-  // Listen for keyboard shortcut "E" to enter edit mode
-  useEffect(() => {
-    const startHandler = () => {
-      if (latestDraft && !isEditing) {
-        handleStartEdit();
-        setTimeout(() => editorRef?.current?.focus(), 50);
-      }
-    };
-    const cancelHandler = () => {
-      if (isEditing) setIsEditing(false);
-    };
-    window.addEventListener("replypilot:start-edit", startHandler);
-    window.addEventListener("replypilot:cancel-edit", cancelHandler);
-    return () => {
-      window.removeEventListener("replypilot:start-edit", startHandler);
-      window.removeEventListener("replypilot:cancel-edit", cancelHandler);
-    };
-  }, [latestDraft, isEditing, handleStartEdit]);
-
   const handleChipClick = useCallback((chip: string) => {
     setFeedback((prev) => (prev ? `${prev}, ${chip.toLowerCase()}` : chip));
   }, []);
@@ -119,6 +100,25 @@ export function DraftPanel({
       setIsEditing(false);
     }
   }, [editedDraft, onSaveDraft]);
+
+  // Listen for keyboard shortcut "E" to enter edit mode
+  useEffect(() => {
+    const startHandler = () => {
+      if (latestDraft && !isEditing) {
+        handleStartEdit();
+        setTimeout(() => editorRef?.current?.focus(), 50);
+      }
+    };
+    const cancelHandler = () => {
+      if (isEditing) setIsEditing(false);
+    };
+    window.addEventListener("replypilot:start-edit", startHandler);
+    window.addEventListener("replypilot:cancel-edit", cancelHandler);
+    return () => {
+      window.removeEventListener("replypilot:start-edit", startHandler);
+      window.removeEventListener("replypilot:cancel-edit", cancelHandler);
+    };
+  }, [latestDraft, isEditing, handleStartEdit]);
 
   if (!reply) {
     return (
