@@ -7,6 +7,7 @@ const tempConfig: Record<string, { label: string; className: string; icon: strin
   simple: { label: "Simple", className: "bg-green-500/10 text-green-600 border-green-500/30", icon: "⚡" },
   for_later: { label: "For later", className: "bg-primary/10 text-primary border-primary/30", icon: "⏳" },
   cold: { label: "Cold", className: "bg-muted text-muted-foreground", icon: "❄️" },
+  no_reply_needed: { label: "No reply", className: "bg-muted text-muted-foreground", icon: "💤" },
   out_of_office: { label: "OOO", className: "bg-muted text-muted-foreground", icon: "✈️" },
 };
 

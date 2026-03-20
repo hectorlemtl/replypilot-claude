@@ -19,7 +19,7 @@ import {
 
 const TEMP_COLORS: Record<string, string> = {
   hot: "#ef4444", warm: "#f97316", simple: "#3b82f6",
-  cold: "#9ca3af", for_later: "#eab308", out_of_office: "#a855f7",
+  cold: "#9ca3af", no_reply_needed: "#6b7280", for_later: "#eab308", out_of_office: "#a855f7",
 };
 
 function KPICard({ label, value, icon: Icon, color }: { label: string; value: string | number; icon?: any; color?: string }) {
@@ -78,6 +78,7 @@ export default function AnalyticsPage() {
     { name: "Simple", value: kpis?.simple || 0, color: TEMP_COLORS.simple },
     { name: "Cold", value: kpis?.cold || 0, color: TEMP_COLORS.cold },
     { name: "For later", value: kpis?.forLater || 0, color: TEMP_COLORS.for_later },
+    { name: "No reply", value: kpis?.noReplyNeeded || 0, color: TEMP_COLORS.no_reply_needed },
     { name: "OOO", value: kpis?.ooo || 0, color: TEMP_COLORS.out_of_office },
   ].filter(d => d.value > 0);
 

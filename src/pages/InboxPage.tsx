@@ -18,6 +18,7 @@ const FILTERS = [
   { key: "warm", label: "☀️ Warm", type: "temperature" },
   { key: "cold", label: "❄️ Cold", type: "temperature" },
   { key: "for_later", label: "⏳ For later", type: "temperature" },
+  { key: "no_reply_needed", label: "💤 No reply", type: "temperature" },
   { key: "out_of_office", label: "✈️ OOO", type: "temperature" },
   { key: "awaiting_review", label: "Awaiting review", type: "status" },
   { key: "sent", label: "Sent", type: "status" },

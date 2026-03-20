@@ -37,6 +37,7 @@ const TEMP_COLORS: Record<string, string> = {
   simple: "bg-blue-100 text-blue-700 border-blue-200",
   cold: "bg-gray-100 text-gray-600 border-gray-200",
   for_later: "bg-yellow-100 text-yellow-700 border-yellow-200",
+  no_reply_needed: "bg-gray-100 text-gray-500 border-gray-200",
   out_of_office: "bg-purple-100 text-purple-700 border-purple-200",
 };
 

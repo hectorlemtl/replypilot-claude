@@ -17,6 +17,46 @@ const COLD_PATTERNS = [
   /don't contact/i, /do not contact/i, /wrong person/i,
 ];
 
+// Replies that are conversational noise — no response needed
+// These are short acknowledgments, corrections, or filler that don't ask or request anything
+const NO_REPLY_PATTERNS = [
+  /^thanks!?\.?$/i, /^thank you!?\.?$/i, /^thx!?\.?$/i, /^ty!?\.?$/i,
+  /^ok!?\.?$/i, /^okay!?\.?$/i, /^k\.?$/i,
+  /^got it!?\.?$/i, /^noted!?\.?$/i, /^understood!?\.?$/i,
+  /^no worries!?\.?$/i, /^no problem!?\.?$/i, /^np!?\.?$/i,
+  /^(ha)+!?\.?$/i, /^lol!?\.?$/i, /^lmao!?\.?$/i, /^heh!?\.?$/i,
+  /^great!?\.?$/i, /^nice!?\.?$/i, /^cool!?\.?$/i, /^awesome!?\.?$/i,
+  /^perfect!?\.?$/i, /^wonderful!?\.?$/i,
+  /^will do!?\.?$/i, /^roger!?\.?$/i, /^copy!?\.?$/i,
+  /^👍?$/, /^🙏?$/, /^😊?$/, /^😁?$/, /^🤣?$/, /^❤️?$/,
+];
+
+// Check if text is very short AND is a correction, typo fix, or pure acknowledgment
+function isNoReplyNeeded(text: string): boolean {
+  // Strip whitespace and check against patterns
+  const cleaned = text.replace(/\s+/g, " ").trim();
+
+  // Direct pattern match
+  if (NO_REPLY_PATTERNS.some((p) => p.test(cleaned))) return true;
+
+  // Emoji-only messages (one or more emoji, no real text)
+  if (/^[\p{Emoji}\p{Emoji_Presentation}\p{Emoji_Modifier}\p{Emoji_Component}\s]+$/u.test(cleaned)) return true;
+
+  // Very short messages (under 30 chars) that are corrections/typo fixes
+  // e.g., "I mean zeffy. 😁", "I meant zeffy", "Oops, zeffy", "*zeffy"
+  if (cleaned.length <= 40) {
+    if (/^i mean(t)?\b/i.test(cleaned)) return true;
+    if (/^oops\b/i.test(cleaned)) return true;
+    if (/^\*\w+/i.test(cleaned)) return true; // *correction style
+    if (/^(sorry|my bad),?\s/i.test(cleaned) && cleaned.length <= 30) return true;
+
+    // "thanks for the info/update/details" — gratitude with no question
+    if (/^thanks?\s+(for\s+)?(the\s+)?(info|update|details|information|sharing|letting)/i.test(cleaned)) return true;
+  }
+
+  return false;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -64,6 +104,11 @@ serve(async (req) => {
       return respond({ classified: "cold", reason: "negative_pattern" });
     }
 
+    if (isNoReplyNeeded(text)) {
+      await updateReply(supabase, reply_id, "skipped", "no_reply_needed", "Conversational noise — no response needed", false, false, "neutral");
+      return respond({ classified: "no_reply_needed", reason: "pattern_match" });
+    }
+
     // AI classification via Anthropic Claude
     const { data: template } = await supabase
       .from("prompt_templates")
@@ -86,7 +131,7 @@ serve(async (req) => {
         input_schema: {
           type: "object",
           properties: {
-            category: { type: "string", enum: ["hot", "simple", "for_later", "cold", "out_of_office"], description: "Lead temperature classification. 'hot' = interested lead needing a thoughtful reply. 'simple' = easy to answer (simple affirmative, quick yes, short acknowledgment) that could be auto-replied." },
+            category: { type: "string", enum: ["hot", "simple", "no_reply_needed", "for_later", "cold", "out_of_office"], description: "Lead temperature classification. 'hot' = interested lead needing a thoughtful reply. 'simple' = reply that NEEDS a response but is easy to answer (e.g., 'yes send it', 'tell me more', 'interested', 'sounds good, send me the info'). 'no_reply_needed' = conversational noise that does NOT need any response — acknowledgments ('thanks', 'got it', 'ok'), corrections ('I mean zeffy', '*zeffy'), emoji-only messages, filler ('no worries', 'lol'), or gratitude with no question ('thanks for the info'). Use 'no_reply_needed' when the message does not ask a question, request information, or express interest that warrants a follow-up." },
             reasoning: { type: "string", description: "Brief explanation of the classification" },
             wants_pdf: { type: "string", enum: ["true", "false"], description: "Whether the lead wants a PDF/deck" },
             simple_affirmative: { type: "string", enum: ["true", "false"], description: "Whether this is a simple yes/affirmative reply" },
@@ -104,7 +149,7 @@ serve(async (req) => {
     const simple_affirmative = classification.simple_affirmative === "true" || classification.simple_affirmative === true;
     const sentiment = classification.sentiment as string;
 
-    const shouldSkip = ["cold", "for_later", "out_of_office"].includes(category);
+    const shouldSkip = ["cold", "for_later", "out_of_office", "no_reply_needed"].includes(category);
     const newStatus = shouldSkip ? "skipped" : "classified";
 
     await updateReply(supabase, reply_id, newStatus, category, reasoning, wants_pdf, simple_affirmative, sentiment);
@@ -155,6 +200,7 @@ async function updateReply(
 const SMARTLEAD_CATEGORY_MAP: Record<string, string> = {
   hot: "Interested",
   simple: "Interested",
+  no_reply_needed: "Not Interested",
   cold: "Not Interested",
   for_later: "Not Interested",
   out_of_office: "Out of Office",

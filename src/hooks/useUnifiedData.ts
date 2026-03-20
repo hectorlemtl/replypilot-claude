@@ -78,6 +78,7 @@ export function useKPIs(dateRange?: DateRange, campaign?: string) {
       const simple = data?.filter(r => r.temperature === "simple").length || 0;
       const cold = data?.filter(r => r.temperature === "cold").length || 0;
       const forLater = data?.filter(r => r.temperature === "for_later").length || 0;
+      const noReplyNeeded = data?.filter(r => r.temperature === "no_reply_needed").length || 0;
       const ooo = data?.filter(r => r.temperature === "out_of_office").length || 0;
       const positive = hot + warm + simple;
       const sent = data?.filter(r => r.rp_status === "sent").length || 0;
@@ -94,7 +95,7 @@ export function useKPIs(dateRange?: DateRange, campaign?: string) {
       }
 
       return {
-        total, hot, warm, simple, cold, forLater, ooo, positive, sent, unclassified,
+        total, hot, warm, simple, cold, forLater, noReplyNeeded, ooo, positive, sent, unclassified,
         avgResponseHours,
         positiveRate: total > 0 ? Math.round(positive / total * 100) : 0,
         hotRate: total > 0 ? Math.round(hot / total * 100) : 0,

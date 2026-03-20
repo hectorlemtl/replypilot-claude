@@ -48,7 +48,7 @@ Generate a tailored reply in Julia's voice that: (1) checks lead temperature and
 
 ## Step 1 — Draft condition
 
-- If leadTemperature is "cold", "for_later", or "out_of_office" (case-insensitive), output exactly: NO_REPLY_NEEDED
+- If leadTemperature is "cold", "for_later", "out_of_office", or "no_reply_needed" (case-insensitive), output exactly: NO_REPLY_NEEDED
 
 - If leadTemperature is "hot", "warm", or "simple", proceed to draft.
 
